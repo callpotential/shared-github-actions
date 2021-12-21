@@ -1,0 +1,18 @@
+name: 'Terraform Deploy EKS - Single Environment'
+description: 'Triggers a workflow dispatch of EKS Infra - Terraform Apply.'
+inputs:
+  pull-access-token:
+    description: 'Github pull access token.'
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - name: Deploy EKS Infra
+    uses: benc-uk/workflow-dispatch@v1
+    with:
+      workflow: Terraform Apply
+      token: ${{ inputs.pull-access-token }}
+      repo: GetTerminus/eks-infra
+      ref: master
+      inputs: '{"environment": "all"}'
+      
