@@ -7,6 +7,10 @@ inputs:
   terraform-version:
     description: 'Version of terraform to use.'
     required: true
+  artifactory-enabled:
+    description: 'Whether or not the repo uses artifactory for the helm chart.'
+    default: 'false'
+    required: false
 runs:
   using: "composite"
   steps:
@@ -31,6 +35,13 @@ runs:
       with:
         state: pending
         token: ${{ github.token }}
+    - name: Helm Update
+      if: ${{ inputs.artifactory-enabled }} == 'true'
+      run: |
+        helm repo add terminus https://getterminus.jfrog.io/artifactory/default-helm/ --username developer --password ${{ secrets.ARTIFACTORY_READONLY_ACCESS_TOKEN }}
+        helm repo update
+        helm dependency update $CHART_PATH
+      shell: bash
     - name: HashiCorp - Setup Terraform
       uses: hashicorp/setup-terraform@v1.2.1
       with:
