@@ -1,23 +1,24 @@
 name: 'Terraform Plan - Multiple Workspaces'
 description: 'Runs a terraform plan for a for a repo with a multiple workspaces (i.e. most terminus repos).'
 inputs:
-  ssh-private-key:
-    description: 'Private key for ssh agent.'
+  ssh_key:
+    description: '[secret] GitHub SSH Key for pulling repo.'
     required: true
-  terraform-version:
-    description: 'Version of terraform to use.'
+  terraform_version:
+    description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
     required: true
-  github-token:
-    description: 'Github token for plan commenter to use.'
+  github_token:
+    description: '[secret] Github token for plan commenter to use.'
     required: true
-  enable-plan-commenter:
-    description: 'Enable the tf plan commenter.'
+  enable_plan_commenter:
+    description: '[bool] (i.e. true/false) Enable the tf plan commenter.'
     required: false
     default: 'true'
-  initial-run:
-    description: 'If true workspace will be created based on TF_WORKSPACE.
-                  This should only be run when creating the repo and running
-                  the plan for the first time and removed after.'
+  initial_run:
+    description: '[bool] (i.e. true/false) If set to true, workspace will be
+                  created based on TF_WORKSPACE. This should only be run when
+                  creating the repo and running the plan for the first time and
+                  removed after.'
     required: false
     default: 'false'
 runs:
@@ -26,24 +27,24 @@ runs:
     - name: Install SSH Key
       uses: webfactory/ssh-agent@v0.4.1
       with:
-        ssh-private-key: ${{ inputs.ssh-private-key }}
+        ssh-private-key: ${{ inputs.ssh_key }}
     - name: Pull
       uses: actions/checkout@v2
     - name: HashiCorp - Setup Terraform
       uses: hashicorp/setup-terraform@v1.2.1
       with:
-        terraform_version: ${{ inputs.terraform-version }}
+        terraform_version: ${{ inputs.terraform_version }}
     - name: Terraform Format Check
       id: fmt
       run: terraform fmt -check -recursive || echo "::set-output name=exitcode_continue_on_error::$?" 
       #TODO: Uncomment once github supports it
       #continue-on-error: true
       shell: bash
-    - name: Post Format
+    - name: Post TF Format Check
       if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       uses: robburger/terraform-pr-commenter@v1.5.0
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         EXPAND_SUMMARY_DETAILS: "false"
       with:
         commenter_type: fmt
@@ -61,14 +62,14 @@ runs:
       if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       uses: robburger/terraform-pr-commenter@v1.5.0
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         EXPAND_SUMMARY_DETAILS: "false"
       with:
         commenter_type: init
         commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
         commenter_exitcode: ${{ steps.init.outputs.exitcode }}
     - name: TF Plan - Create Workspace
-      if: ${{ inputs.initial-run == 'true' }}
+      if: ${{ inputs.initial_run == 'true' }}
       run: |
         terraform workspace new ${{ env.TF_WORKSPACE }}
         terraform workspace select ${{ env.TF_WORKSPACE }}
@@ -83,7 +84,7 @@ runs:
       if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       uses: robburger/terraform-pr-commenter@v1.5.0
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         EXPAND_SUMMARY_DETAILS: "false"
       with:
         commenter_type: validate
@@ -100,10 +101,10 @@ runs:
         terraform show tfplan
       shell: bash
     - name: Post TF Plan Comment
-      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && inputs.enable-plan-commenter == 'true' }}
+      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && inputs.enable_plan_commenter == 'true' }}
       uses: robburger/terraform-pr-commenter@v1.5.0
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         EXPAND_SUMMARY_DETAILS: "false"
       with:
         commenter_type: plan
