@@ -17,6 +17,9 @@ inputs:
   artifactory_helm_chart_path:
     description: '[string] Path to helm chart for artifactory.'
     required: false
+  datadog_api_key:
+    description: '[secret] DataDog API Key. Required for the git-metadata upload.'
+    required: false
 
 runs:
   using: "composite"
@@ -34,7 +37,9 @@ runs:
       with:
         ref: ${{ github.event.deployment.ref }}
     - name: Upload Git MetaData to Datadog
+      if: ${{ inputs.datadog_api_key != '' }}
       run: |
+        export DATADOG_API_KEY=${{ inputs.datadog_api_key }}
         datadog-ci git-metadata upload
       shell: bash
     - name: Deployment Pending
@@ -55,6 +60,11 @@ runs:
         terraform_version: ${{ inputs.terraform_version }}
     - name: TF Apply
       run: |
+        if [ ! -z ${{ inputs.datadog_api_key }} ]
+        then
+          echo "Setting DATADOG_API_KEY to ${{ inputs.datadog_api_key }} from inputs.datadog_api_key"
+          export DATADOG_API_KEY=${{ inputs.datadog_api_key }}
+        fi
         terraform version
         terraform init -lock=false -input=false
         terraform validate
