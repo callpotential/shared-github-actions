@@ -14,5 +14,5 @@ runs:
       token: ${{ inputs.pull_access_token }}
       repo: GetTerminus/eks-infra
       ref: master
-      inputs: '{"environment": "all"}'
+      inputs: '{"environment": "all", "use_delivery_bot": "false"}'
       
