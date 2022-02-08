@@ -39,6 +39,7 @@ runs:
       uses: actions/checkout@v2
       with:
         ref: ${{ github.event.deployment.ref }}
+        lfs: true
     - name: Upload Git MetaData to Datadog
       if: ${{ inputs.datadog_api_key != '' }}
       run: |
