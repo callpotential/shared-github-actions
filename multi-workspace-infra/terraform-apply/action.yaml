@@ -38,12 +38,12 @@ runs:
       run: |
         cd ${{ github.action_path }}
         source ../../shell-scripts/input-validator.sh
-        
+
         declare -A inputs
         inputs[ssh_key]="$SSH_KEY"
         inputs[terraform_version]="$TERRAFORM_VERSION"
         inputs[tf_workspace]="$TF_WORKSPACE"
-        
+
         validateInput inputs
       shell: bash
     - name: Install SSH Key
@@ -97,6 +97,30 @@ runs:
         terraform plan -var-file=vars/${{ inputs.tf_workspace }}.tfvars -lock=true -lock-timeout=0s -input=false -out=tfplan
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
       shell: bash
+    - name: Get Local Service Name
+      id: service_name
+      run: |
+        if output=$(terraform output service_name)
+        then
+          echo -e "\nFound service_name!\n"
+          echo "::set-output name=service_name::${output}"
+        else
+          echo ""
+          echo "::warning title=service_name not set::service_name is not set as a terraform output."
+          echo -e "\nIn order to automatically trigger datadog synthetic tests and to\nprevent errors being deployed to prod, please set service_name\nas an output in locals.tf like the example below:\n"
+          echo -e "output service_name {\n"
+          echo -e "  value = local.service_name\n"
+          echo -e "}\n"
+          echo "::set-output name=service_name::false"
+        fi
+      shell: bash
+    - name: Run Datadog Synthetics tests
+      if: ${{ steps.service_name.outputs.service_name != 'false' }}
+      uses: DataDog/synthetics-ci-github-action@v0.2.2
+      with:
+        api_key: $DATADOG_API_KEY
+        app_key: $DATADOG_APP_KEY
+        test_search_query: 'tag:${{ steps.service_name.outputs.service_name }}'
     - name: Deployment Success
       if: ${{ success() && inputs.use_delivery_bot == 'true' }}
       uses: deliverybot/deployment-status@v1
@@ -109,4 +133,3 @@ runs:
       with:
         state: failure
         token: ${{ github.token }}
-      
