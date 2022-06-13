@@ -23,9 +23,6 @@ inputs:
   datadog_api_key:
     description: '[secret] DataDog API Key. Required for the git-metadata upload.'
     required: false
-  use_delivery_bot:
-    description: '[bool] (i.e. true/false) Whether or not to run the delivery bot deployment status steps.'
-    required: false
   dd_trigger_synthetic_tests:
     description: '[bool] (i.e. true/false) Enable the tf plan commenter.'
     required: false
@@ -69,12 +66,13 @@ runs:
         export DATADOG_API_KEY=${{ inputs.datadog_api_key }}
         datadog-ci git-metadata upload
       shell: bash
-    - name: Deployment Pending
-      if:  ${{ inputs.use_delivery_bot == 'true' }}
-      uses: deliverybot/deployment-status@v1
+    - name: Update deployment status (pending)
+      if: always()
+      uses: chrnorm/deployment-status@v2
       with:
-        state: pending
         token: ${{ github.token }}
+        state: pending
+        deployment-id: ${{ github.event.deployment.id }}
     - name: Helm Update
       if: ${{ inputs.artifactory_enabled == 'true' }}
       run: |
@@ -131,15 +129,26 @@ runs:
         api_key: ${{ env.DATADOG_API_KEY }}
         app_key: ${{ env.DATADOG_APP_KEY }}
         test_search_query: 'tag:managedby:*${{ env.GITHUB_REPOSITORY }}*'
-    - name: Deployment Success
-      if: ${{ success() && inputs.use_delivery_bot == 'true' }}
-      uses: deliverybot/deployment-status@v1
+    - name: Run Post Deploy Integration Cypress Tests
+      if: ${{ inputs.cypress_test_branch != '' && inputs.cypress_test_workflow != '' && inputs.cypress_test_repo != '' && inputs.cypress_test_token != '' && inputs.cypress_test_env != '' }}
+      uses: benc-uk/workflow-dispatch@v1
       with:
+        ref: refs/heads/${{ inputs.cypress_test_branch }}
+        workflow: ${{ inputs.cypress_test_workflow }}
+        repo: GetTerminus/${{ inputs.cypress_test_repo }}
+        token: ${{ inputs.cypress_test_token }}
+        inputs: '{ "environment": "${{ inputs.cypress_test_env }}" }'
+    - name: Update deployment status (success)
+      if: success()
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: ${{ github.token }}
         state: success
-        token: ${{ github.token }}
-    - name: Deployment Failure
-      if: ${{ failure() && inputs.use_delivery_bot == 'true' }}
-      uses: deliverybot/deployment-status@v1
+        deployment-id: ${{ github.event.deployment.id }}
+    - name: Update deployment status (failure)
+      if: failure()
+      uses: chrnorm/deployment-status@v2
       with:
-        state: failure
         token: ${{ github.token }}
+        state: failure
+        deployment-id: ${{ github.event.deployment.id }}
