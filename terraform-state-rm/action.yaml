@@ -7,6 +7,9 @@ inputs:
   terraform_version:
     description: '[decimal] [required] (e.g. 1.0.11) Terraform version to use.'
     required: true
+  terraform_directory:
+    description: '[decimal] [required] (e.g. preprod) Directory you will cd into before running Terraform.'
+    required: false
   resource_address:
     description: "[resource_name] [required] (e.g. datadog_monitor.platform-browser-identity-status). Type and name of the resource that will be removed in dot notation."
     required: true
@@ -55,6 +58,10 @@ runs:
       run: |
         terraform version
         terraform init -lock=false
+        if [ -n ${{ env.TERRAFORM_DIRECTORY }} ]
+        then
+          cd $TERRAFORM_DIRECTORY
+        fi
         terraform workspace select ${{ inputs.terraform_workspace }}
       shell: bash
     - name: Dry Run
