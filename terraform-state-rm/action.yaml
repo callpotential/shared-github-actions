@@ -56,6 +56,10 @@ runs:
         terraform_version: ${{ inputs.terraform_version }}
     - name: Initialize Terraform
       run: |
+        if [ -n ${{ env.TERRAFORM_DIRECTORY }} ]
+        then
+          cd $TERRAFORM_DIRECTORY
+        fi
         terraform version
         terraform init -lock=false
         if [ -n ${{ env.TERRAFORM_DIRECTORY }} ]
