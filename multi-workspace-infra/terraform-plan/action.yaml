@@ -42,6 +42,10 @@ inputs:
     description: '[string][advanced][do not use] A targeted resource to have terraform `apply` prior to planning.  USE WITH CAUTION.'
     required: false
     default: ''
+  use_beta_commenter:
+    description: '[bool] Whether to use the beta version of the PR commenter (see the v2-beta tag on its repo).'
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -101,6 +105,7 @@ runs:
         commenter_input: ${{ format('{0}{1}', steps.fmt.outputs.stdout, steps.fmt.outputs.stderr) }}
         commenter_exitcode: ${{ steps.fmt.outputs.exitcode }}
         terraform_version: ${{ inputs.terraform_version }}
+        use_beta_version: ${{ inputs.use_beta_commenter }}
     - name: TF Plan - Initialize
       id: init
       run: |
@@ -120,6 +125,7 @@ runs:
         commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
         commenter_exitcode: ${{ steps.init.outputs.exitcode }}
         terraform_version: ${{ inputs.terraform_version }}
+        use_beta_version: ${{ inputs.use_beta_commenter }}
     - name: TF Plan - Select Workspace
       if: ${{ inputs.tf_create_workspace != 'true' }}
       run: |
@@ -148,6 +154,7 @@ runs:
         commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
         commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
         terraform_version: ${{ inputs.terraform_version }}
+        use_beta_version: ${{ inputs.use_beta_commenter }}
     - name: TF Plan - Targeted pre-apply
       if: ${{ inputs.pre_apply_target != '' }}
       # please don't use this.
@@ -190,9 +197,11 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         EXPAND_SUMMARY_DETAILS: "false"
         TF_WORKSPACE: ${{ inputs.terraform_workspace }}
+        COMMENTER_DEBUG: "true"
       with:
         commenter_type: plan
         commenter_input: ${{ env.PLAN_OUTPUT }}
         commenter_plan_path: tfplan
         commenter_exitcode: ${{ steps.plan.outputs.exit }}
         terraform_version: ${{ inputs.terraform_version }}
+        use_beta_version: ${{ inputs.use_beta_commenter }}
