@@ -96,7 +96,7 @@ runs:
         terraform validate
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
-        terraform plan -var-file=vars/${{ inputs.terraform_workspace }}.tfvars -lock=true -lock-timeout=0s -input=false -out=tfplan
+        terraform plan $(printf -- '-var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars) -lock=true -lock-timeout=0s -input=false -out=tfplan
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
       shell: bash
     - name: Set Github Repo to Env Variable
