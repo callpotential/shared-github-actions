@@ -16,6 +16,9 @@ inputs:
   resource_name:
     description: "[resource_name] [required] (i.e. datadog_monitor.platform-browser-identity-status). Type and name of the resource that will be in your TF File in dot notation."
     required: true
+  is_kubernetes_resource:
+    description: "[is_kubernetes_resource] [optional] This will force a 'terraform refresh' before the import which is required for kubernetes resources due to shortlived tokens from eks."
+    required: false
   dry_run:
     description: "[dry_run] [required] (i.e. true/false). If you wish to skip updating the TF State File."
     required: true
@@ -80,6 +83,15 @@ runs:
         printf "\n${RED}4.${NC} Comment out all but the required attributes and trigger another plan."
         printf "\n${RED}5.${NC} Uncomment any attributes that ${RED}show a diff with the state file${NC} or you feel should be controlled via the configuration file."
         printf "\n${RED}6.${NC} Once the terraform plan runs with no changes to infrastructure for the imported resource, remove the code comments and merge your changes."
+      shell: bash
+    - name: Update Terraform State File - If dry_run == 'false'
+      if: ${{ inputs.dry_run == 'false' && inputs.is_kubernetes_resource == 'true'}}
+      run: |
+        if [ ${{ inputs.terraform_workspace }} != "default" ]; then
+          terraform refresh -var-file=vars/${{ inputs.terraform_workspace }}.tfvars
+        else
+          terraform refresh
+        fi
       shell: bash
     - name: Update Terraform State File - If dry_run == 'false'
       if: ${{ inputs.dry_run == 'false' }}
