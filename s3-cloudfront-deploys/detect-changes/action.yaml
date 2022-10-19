@@ -1,0 +1,43 @@
+name: 'Detect Deployment Changes'
+description: 'Detect Deployment Changes'
+
+inputs:
+  deploying-env-json:
+    description: 'Environment JSON'
+    required: true
+  target-domain:
+    description: 'Base URL for target domain'
+    required: true
+
+outputs:
+  changes-found:
+    description: "Whether changes are found: 'true' or 'false'"
+    value: ${{ steps.detect-changes.outputs.changes-found }}
+  current-sha:
+    description: "SHA of currently deployed app"
+    value: ${{ steps.detect-changes.outputs.current-sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect Changes
+      id: detect-changes
+      shell: bash
+      run: |
+        ENV_NEW=`echo '${{ inputs.deploying-env-json }}' | jq -Mc`
+        set +e
+        ENV_LIVE=`wget -q https://${{ inputs.target-domain }}/environment.json --timeout=3 --tries=1 -O - | jq -Mc`
+        set -e
+
+        if [[ ${ENV_NEW} == ${ENV_LIVE} ]]
+        then
+          echo "Environment Unchanged"
+          CHANGES="false"
+        else
+          echo "Environment Changes Detected"
+          CHANGES="true"
+        fi
+
+        echo "changes-found=${CHANGES}" >> $GITHUB_OUTPUT
+        CURRENT_SHA=`echo ${ENV_LIVE} | jq -r '.COMMIT_SHA'`
+        echo "current-sha=${CURRENT_SHA}" >> $GITHUB_OUTPUT

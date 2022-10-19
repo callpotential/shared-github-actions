@@ -1,0 +1,40 @@
+name: 'Export Terraform Outputs'
+description: 'Export Terraform Outputs'
+
+inputs:
+  env-prefix:
+    description: 'Prefix for exported ENV vars'
+    default: 'tf_'
+    required: false
+  outputs-json-file:
+    description: 'path to filename for json file of outputs from terraform'
+    default: 'gha-outputs.json'
+    required: false
+
+runs:
+  using: composite
+  steps:
+      # Loops over ouput variables exported from the Terraform run
+      # (defined in gha-outputs.tf) and makes them available
+      # to downstream GHA steps via outputs and prefixed ENV vars
+      - name: Export TF vars
+        id: tf_vars
+        shell: bash
+        run: |
+          TF_VARS=`cat ${{ inputs.outputs-json-file }}`
+          for key in `echo $TF_VARS | jq -r 'keys []'`
+          do
+            echo "${{ inputs.env-prefix }}${key}=`echo $TF_VARS | jq -r ".${key}"`" >> $GITHUB_ENV
+          done
+
+          CF_DIST_ID=`echo $TF_VARS | jq -r ".cf_distribution_id"`
+          BUILDS_BUCKET=`echo $TF_VARS | jq -r ".builds_bucket"`
+          DOCROOTS_BUCKET=`echo $TF_VARS | jq -r ".docroots_bucket"`
+          DEPLOY_ROLE_ARN=`echo $TF_VARS | jq -r ".iam_deploy_role_arn"`
+
+          echo "---- AWS Resources ----"
+          echo "Cloudfront Distribution ID: ${CF_DIST_ID}"
+          echo "Builds Bucket: ${BUILDS_BUCKET}"
+          echo "DocRoots Bucket: ${DOCROOTS_BUCKET}"
+          echo "IAM Role for writing to S3 buckets: ${DEPLOY_ROLE_ARN}"
+          echo "-----------------------"

@@ -1,0 +1,54 @@
+name: 'Publish to S3'
+description: 'Package and Publish App to S3'
+
+inputs:
+  service-name:
+    required: true
+    description: Forms the base of the packaged zip file, likely `app-name`-ui
+  dist-dir:
+    required: true
+    description: Directory where app build assets are created
+  aws-region:
+    required: false
+    default: 'us-east-1'
+    description: region for AWS operations
+  aws-access-key-id:
+    required: true
+    description: Access Key of user to login as
+  aws-secret-access-key:
+    required: true
+    description: Secret Access key of user to login as
+  aws-role:
+    required: true
+    description: Role to assume to deploy package
+  builds-bucket-name:
+    required: true
+    description: Bucket name for deployed packages
+
+
+runs:
+  using: composite
+  steps:
+    - name: Packaging App
+      uses: vimtor/action-zip@v1
+      with:
+        files: ${{ inputs.dist-dir }}
+        dest: package.zip
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ inputs.aws-role }}
+        role-skip-session-tagging: true
+        role-duration-seconds: 1200
+
+    - name: Deploy build to S3
+      shell: bash
+      run: |
+        NOW=`date`
+        ZIP_FILE="${{ inputs.service-name }}.${{ github.sha }}.zip"
+        aws s3 cp package.zip s3://${{ inputs.builds-bucket-name }}/${ZIP_FILE} --metadata "Touched=${NOW}"
+        aws s3api put-object-tagging --bucket ${{ inputs.builds-bucket-name }} --key ${ZIP_FILE} --tagging '{"TagSet": [{ "Key": "Active", "Value": "False" }]}'

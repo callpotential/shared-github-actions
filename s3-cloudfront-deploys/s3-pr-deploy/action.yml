@@ -1,0 +1,92 @@
+name: 'Publish to S3'
+description: 'Package and Publish App to S3'
+
+inputs:
+  dist-dir:
+    required: true
+    description: Directory where app build assets are created
+  aws-region:
+    required: false
+    default: 'us-east-1'
+    description: region for AWS operations
+  aws-access-key-id:
+    required: true
+    description: Access Key of user to login as
+  aws-secret-access-key:
+    required: true
+    description: Secret Access key of user to login as
+  aws-role:
+    required: true
+    description: Role to assume to deploy files
+  docroots-bucket-name:
+    required: true
+    description: Bucket name for deployed files
+  subdomain:
+    required: false
+    description: (optional) subdomain to publish to. Generated from PR ref name by default
+  base-url:
+    required: true
+    description: base url for the service. e.g. "home.terminusplatform.ninja"
+  app-name:
+    required: false
+    description: for repos with multiple repos, set this to differentiate the GH deployments
+
+
+runs:
+  using: composite
+  steps:
+    # Create a common subdomain slug from the branch name
+    # for any apps that will be deployed to a PR-tied deployment.
+    - name: Create Branch Slug for S3
+      id: branch-slug
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.subdomain }}"]; then
+          branch_slug=`echo "${{ github.event.pull_request.head.ref }}" | tr '/_' '-' | tr -cd '[:alnum:]-' | tr '[:upper:]' '[:lower:]' | cut -c -40`
+          echo "Subdomain slug based on branch name: ${branch_slug}"
+        else
+          branch_slug="${{ inputs.subdomain }}"
+          echo "Subdomain slug based on input: ${branch_slug}"
+        fi
+        echo "branch_slug=$branch_slug" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub deployment
+      uses: chrnorm/deployment-action@v2
+      id: deployment
+      with:
+        token: '${{ github.token }}'
+        environment-url: https://${{ steps.branch-slug.outputs.branch_slug }}.${{ inputs.base-url }}
+        environment: ${{ inputs.app-name && format('ninja-{0}', inputs.app-name) || 'ninja' }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ inputs.aws-role }}
+        role-skip-session-tagging: true
+        role-duration-seconds: 1200
+
+    - name: Deploy to S3
+      shell: bash
+      run: |
+        aws s3 sync ${{ inputs.dist-dir }} s3://${{ inputs.docroots-bucket-name }}/temp/${{ steps.branch-slug.outputs.branch_slug }} --delete
+
+    - name: Update deployment status (success)
+      if: success()
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+        environment-url: https://${{ steps.branch-slug.outputs.branch_slug }}.${{ inputs.base-url }}
+        state: 'success'
+
+    - name: Update deployment status (failure)
+      if: failure()
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+        environment-url: https://${{ steps.branch-slug.outputs.branch_slug }}.${{ inputs.base-url }}
+        state: 'failure'

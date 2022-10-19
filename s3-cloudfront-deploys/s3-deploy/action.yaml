@@ -1,0 +1,136 @@
+name: 'S3 Deploy'
+description: 'Deploy to S3'
+
+inputs:
+  aws-access-key-id:
+    required: true
+    description: AWS Access key id for authentication
+  aws-secret-access-key:
+    required: true
+    description: AWS Secret Access key for authentication
+  aws-region:
+    required: false
+    description: AWS region
+    default: us-east-1
+  deploy-if-unchanged:
+    required: false
+    description: Force deploy even if no changes detected
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: 'Export Terraform Outputs'
+      uses: GetTerminus/terminus-github-actions/s3-cloudfront-deploys/export-tf-outputs@v1
+      with:
+        env-prefix: tf_
+
+    - name: Detect Deployment Changes
+      if: env.tf_ingress_enabled == 'true' && inputs.deploy-if-unchanged == 'false'
+      id: detect-changes
+      uses: GetTerminus/terminus-github-actions/s3-cloudfront-deploys/detect-changes@v1
+      with:
+        deploying-env-json: ${{ env.tf_environment_json }}
+        target-domain: ${{ env.tf_service_domain }}
+
+    - name: Should we deploy
+      id: should-deploy
+      shell: bash
+      run: |
+        SHOULD_DEPLOY=${{ env.tf_ingress_enabled == 'true' && env.tf_commit_sha && (inputs.deploy-if-unchanged == 'true' || steps.detect-changes.outputs.changes-found == 'true') }}
+        echo "should-deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
+        if [ "$SHOULD_DEPLOY" != "true" ]; then
+          echo "Skipping Deployment"
+        fi
+
+    - name: Configure AWS credentials
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ env.tf_aws_provider_role_arn }}
+        role-skip-session-tagging: true
+        role-duration-seconds: 1200
+
+    - uses: actions/setup-node@v3
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+
+    - name: Get Packaged Build
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        PKG_FILE=${{ env.tf_service_name }}.${{ env.tf_commit_sha }}.zip
+        aws s3 cp s3://${{ env.tf_builds_bucket }}/${PKG_FILE} code.zip
+
+    - name: Decompress Build
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        mkdir -p ./code
+        unzip -d ./code code.zip
+
+    - name: Write environment.json
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        echo '${{ env.tf_environment_json }}' > environment.raw.json
+        npx zaach/jsonlint environment.raw.json > code/environment.json
+
+    - name: Deploy Files
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        DOCROOT=temp/${{ env.tf_commit_sha }}
+        aws s3 sync ./code s3://${{ env.tf_docroots_bucket }}/${DOCROOT} --delete
+
+    - name: Health Check
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      working-directory: health_check
+      run: |
+        npm ci
+        node health_check.js https://${{ env.tf_commit_sha }}.${{ env.tf_service_domain }}?health-check
+        exit $?
+
+    - name: Promote Build
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        BUCKET=${{ env.tf_docroots_bucket }}
+        DOCROOT=temp/${{ env.tf_commit_sha }}
+        aws s3 sync s3://${BUCKET}/${DOCROOT} s3://${BUCKET}/active --delete
+
+    - name: Invalidate CF Distribution
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        CF_DIST_ID=${{ env.tf_cf_distribution_id }}
+        OUTPUT=`aws cloudfront create-invalidation --distribution-id ${CF_DIST_ID} --paths "/*"`
+        INVALIDATION_ID=`echo ${OUTPUT} | jq -r '.Invalidation.Id'`
+        aws cloudfront wait invalidation-completed --distribution-id ${CF_DIST_ID} --id ${INVALIDATION_ID}
+
+    - name: Remove Staging DocRoot
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        BUCKET=${{ env.tf_docroots_bucket }}
+        DOCROOT=temp/${{ env.tf_commit_sha }}
+        aws s3 rm s3://${BUCKET}/${DOCROOT} --recursive
+
+    - name: Update builds object tagging
+      if: steps.should-deploy.outputs.should-deploy == 'true'
+      shell: bash
+      run: |
+        NOW=`date`
+
+        if [[ ! -z "${{ steps.detect-changes.outputs.current-sha }}" ]]; then
+          OLD_ACTIVE_FILE="${{ env.tf_service_name }}.${{ steps.detect-changes.outputs.current-sha }}.zip"
+          aws s3 cp s3://${{ env.tf_builds_bucket }}/${OLD_ACTIVE_FILE} s3://${{ env.tf_builds_bucket }}/${OLD_ACTIVE_FILE} --metadata-directive REPLACE --metadata "Touched=${NOW}"
+          aws s3api put-object-tagging --bucket ${{ env.tf_builds_bucket }} --key ${OLD_ACTIVE_FILE} --tagging '{"TagSet": [{ "Key": "Active", "Value": "False" }]}'
+        fi
+
+        NEW_ACTIVE_FILE="${{ env.tf_service_name }}.${{ env.tf_commit_sha }}.zip"
+        aws s3 cp s3://${{ env.tf_builds_bucket }}/${NEW_ACTIVE_FILE} s3://${{ env.tf_builds_bucket }}/${NEW_ACTIVE_FILE} --metadata-directive REPLACE --metadata "Touched=${NOW}"
+        aws s3api put-object-tagging --bucket ${{ env.tf_builds_bucket }} --key ${NEW_ACTIVE_FILE} --tagging '{"TagSet": [{ "Key": "Active", "Value": "True" }]}'
