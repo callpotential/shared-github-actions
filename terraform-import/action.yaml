@@ -49,7 +49,7 @@ runs:
         validateInput inputs
       shell: bash
     - name: Install SSH Key
-      uses: webfactory/ssh-agent@v0.4.1
+      uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{ inputs.ssh_key }}
     - name: Pull
