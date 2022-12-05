@@ -49,6 +49,6 @@ runs:
       shell: bash
       run: |
         NOW=`date`
-        ZIP_FILE="${{ inputs.service-name }}.${{ github.sha }}.zip"
+        ZIP_FILE="${{ inputs.service-name }}.${{ github.event.pull_request.head.sha || github.sha }}.zip"
         aws s3 cp package.zip s3://${{ inputs.builds-bucket-name }}/${ZIP_FILE} --metadata "Touched=${NOW}"
         aws s3api put-object-tagging --bucket ${{ inputs.builds-bucket-name }} --key ${ZIP_FILE} --tagging '{"TagSet": [{ "Key": "Active", "Value": "False" }]}'
