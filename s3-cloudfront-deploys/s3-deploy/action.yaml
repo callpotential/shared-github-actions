@@ -125,7 +125,7 @@ runs:
       run: |
         NOW=`date`
 
-        if [[ ! -z "${{ steps.detect-changes.outputs.current-sha }}" ]]; then
+        if [[ ! -z "${{ steps.detect-changes.outputs.current-sha }}" && "null" != "${{ steps.detect-changes.outputs.current-sha }}" ]]; then
           OLD_ACTIVE_FILE="${{ env.tf_service_name }}.${{ steps.detect-changes.outputs.current-sha }}.zip"
           aws s3 cp s3://${{ env.tf_builds_bucket }}/${OLD_ACTIVE_FILE} s3://${{ env.tf_builds_bucket }}/${OLD_ACTIVE_FILE} --metadata-directive REPLACE --metadata "Touched=${NOW}"
           aws s3api put-object-tagging --bucket ${{ env.tf_builds_bucket }} --key ${OLD_ACTIVE_FILE} --tagging '{"TagSet": [{ "Key": "Active", "Value": "False" }]}'
