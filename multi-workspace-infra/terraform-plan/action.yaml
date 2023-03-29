@@ -201,16 +201,16 @@ runs:
         source-repo: GetTerminus/terminus-github-actions
         source-path: tflint/.tflint.hcl
     - name: TFLint - Setup
-      if: ${{ inputs.tflint_enable == 'true' }}
+      if: ${{ inputs.enable_tflint == 'true' }}
       uses: terraform-linters/setup-tflint@v3
       with:
         tflint_version: latest
     - name: TFLint - Show Version
-      if: ${{ inputs.tflint_enable == 'true' }}
+      if: ${{ inputs.enable_tflint == 'true' }}
       run: tflint --version
       shell: bash
     - name: TFLint - Init
-      if: ${{ inputs.tflint_enable == 'true' }}
+      if: ${{ inputs.enable_tflint == 'true' }}
       run: tflint --init
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
@@ -246,9 +246,9 @@ runs:
           <details>
             <summary>Show Output</summary>
 
-            echo ""
+
             ${{ env.TF_LINT_OUTPUT }}
-            echo ""
+
 
           </details>
     - name: TFLint - Delete Comments if No Issues are Found
