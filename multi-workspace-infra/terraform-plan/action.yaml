@@ -46,10 +46,18 @@ inputs:
     description: '[bool] Whether to use the beta version of the PR commenter (see the v2-beta tag on its repo).'
     required: false
     default: 'false'
+  enable_tflint:
+    description: '[bool] (i.e. true/false) Whether or not to enable and run tflint.'
+    required: false
+    default: 'true'
 
 runs:
   using: "composite"
   steps:
+    - name: Set Shared Actions Root Directory
+      run: |
+        echo "ROOT_DIRECTORY=$(find /home/runner/work/_actions/GetTerminus/terminus-github-actions/ -mindepth 1 -maxdepth 1 -type d)" >> $GITHUB_ENV
+      shell: bash
     - name: Validate Inputs
       env:
         SSH_KEY: ${{ inputs.ssh_key }}
@@ -173,6 +181,98 @@ runs:
       if: ${{ inputs.artifactory_enabled == 'true' }}
       run: |
         find helm/charts -maxdepth 1 -not -path "helm/charts" | xargs -n 1 helm dependency update
+      shell: bash
+    - name: TF Lint - Config Hash
+      if: ${{ inputs.enable_tflint == 'true' }}
+      run: |
+        TFLINT_HASH_ARRAY=($(sha256sum $ROOT_DIRECTORY/tflint/.tflint.hcl))
+        echo "TFLINT_HASH=$TFLINT_HASH_ARRAY" >> $GITHUB_ENV
+      shell: bash
+    - name: TF Lint - Cache plugin dir
+      if: ${{ inputs.enable_tflint == 'true' }}
+      uses: actions/cache@v3
+      with:
+        path: ~/.tflint.d/plugins
+        key: ubuntu-latest-tflint-${{ env.TFLINT_HASH }}
+    - uses: terraform-linters/tflint-load-config-action@v0
+      if: ${{ inputs.enable_tflint == 'true' }}
+      with:
+        token: ${{ inputs.github_token }}
+        source-repo: GetTerminus/terminus-github-actions
+        source-path: tflint/.tflint.hcl
+    - name: TFLint - Setup
+      if: ${{ inputs.tflint_enable == 'true' }}
+      uses: terraform-linters/setup-tflint@v3
+      with:
+        tflint_version: latest
+    - name: TFLint - Show Version
+      if: ${{ inputs.tflint_enable == 'true' }}
+      run: tflint --version
+      shell: bash
+    - name: TFLint - Init
+      if: ${{ inputs.tflint_enable == 'true' }}
+      run: tflint --init
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      shell: bash
+    - name: TFLint - Run and Store Output
+      if: ${{ inputs.enable_tflint == 'true' }}
+      run: |
+        # Copy the stdout file handle to fd5.
+        exec 5>&1
+
+        # Set var files
+        VAR_FILES=$(printf -- '--var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars)
+
+        # Merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from tflint
+        OUTPUT=$(tflint $VAR_FILES 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
+
+        echo "TF_LINT_EXIT_CODE=$?" >> $GITHUB_ENV
+
+        # Set output to env variable
+        EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+        echo "TF_LINT_OUTPUT<<$EOF" >> $GITHUB_ENV
+        echo "$OUTPUT" >> $GITHUB_ENV
+        echo "$EOF" >> $GITHUB_ENV
+      shell: '/bin/bash {0}'
+    - name: TFLint - Add TFLint Output to PR in Comment if Issues are Found
+      if: ${{ env.TF_LINT_EXIT_CODE != '0' && inputs.enable_tflint == 'true' }}
+      uses: thollander/actions-comment-pull-request@v2
+      with:
+        mode: recreate
+        comment_tag: tflint_${{ inputs.terraform_workspace }}
+        message: |
+          ## TFLint Found Issues in `${{ inputs.terraform_workspace }}`
+          <details>
+            <summary>Show Output</summary>
+
+            echo ""
+            ${{ env.TF_LINT_OUTPUT }}
+            echo ""
+
+          </details>
+    - name: TFLint - Delete Comments if No Issues are Found
+      if: ${{ env.TF_LINT_EXIT_CODE == '0' && inputs.enable_tflint == 'true' }}
+      env:
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
+        ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
+        PR_COMMENTS_URL=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.comments_url")
+        PR_COMMENT_URI=$(echo "$GITHUB_EVENT" | jq -r ".repository.issue_comment_url" | sed "s|{/number}||g")
+        comment_ids=()
+        readarray -t -O "${#comment_ids[@]}" comment_ids < <(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[]|select(.body | contains("tflint_${{ inputs.terraform_workspace }}")) | .id')
+        for PR_COMMENT_ID in "${comment_ids[@]}"
+        do
+          FOUND=true
+          echo "Deleting PR Comment: $PR_COMMENT_ID."
+          PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
+          STATUS=$(curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -o /dev/null -w "%{http_code}" -L "$PR_COMMENT_URL")
+          if [ "$STATUS" != "204"  ]; then
+            echo "Failed to delete:  status $STATUS (most likely rate limited)"
+          fi
+        done
       shell: bash
     - name: TF Plan - Run
       id: plan
