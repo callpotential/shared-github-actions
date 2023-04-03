@@ -149,3 +149,9 @@ runs:
         token: ${{ github.token }}
         state: failure
         deployment-id: ${{ github.event.deployment.id }}
+    - uses: int128/datadog-actions-metrics@v1
+      if: always()
+      with:
+        datadog-api-key: ${{ env.DATADOG_API_KEY }}
+        collect-job-metrics: true
+        collect-step-metrics: true

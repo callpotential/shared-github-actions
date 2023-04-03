@@ -18,11 +18,11 @@ runs:
       run: |
         cd ${{ github.action_path }}
         source ../../shell-scripts/input-validator.sh
-        
+
         declare -A inputs
         inputs[terraform_version]="$TERRAFORM_VERSION"
         inputs[ssh_key]="$SSH_KEY"
-        
+
         validateInput inputs
       shell: bash
     - name: Install SSH Key
@@ -56,4 +56,9 @@ runs:
       run: |
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
       shell: bash
-      
+    - uses: int128/datadog-actions-metrics@v1
+      if: always()
+      with:
+        datadog-api-key: ${{ env.DATADOG_API_KEY }}
+        collect-job-metrics: true
+        collect-step-metrics: true
