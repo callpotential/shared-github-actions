@@ -1,2 +1,2 @@
-# terminus-github-actions
-Central repository for storing terminus github actions.
+# shared-github-actions
+Central repository for storing shared github actions.
