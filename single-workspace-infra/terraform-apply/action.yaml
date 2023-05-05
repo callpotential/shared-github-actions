@@ -8,7 +8,7 @@ inputs:
     description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
     required: true
   tf_vars:
-    description: '[array<string>] Variables to be parsed into terraform'
+    description: '[array<string>] Variables to be parsed into terraform seperated by \n'
 
 runs:
   using: "composite"
@@ -41,7 +41,7 @@ runs:
       shell: bash
       env:
         tf_vars: ${{ inputs.tf_vars }}
-      run: printf '%s\n' "${tf_vars[@]}" > terraform.tfvars
+      run: echo $tf_vars > terraform.tfvars
     - name: TF Plan - Setup
       run: |
         terraform version
