@@ -41,7 +41,7 @@ runs:
       shell: bash
       env:
         tf_vars: ${{ inputs.tf_vars }}
-      run: echo $tf_vars > terraform.tfvars
+      run: printf $tf_vars > terraform.tfvars
     - name: TF Plan - Setup
       run: |
         terraform version
