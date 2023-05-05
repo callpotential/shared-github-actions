@@ -9,6 +9,8 @@ inputs:
     required: true
   tf_vars:
     description: '[array<string>] Variables to be parsed into terraform seperated by \n'
+    default: ''
+    required: false
 
 runs:
   using: "composite"
