@@ -7,7 +7,7 @@ inputs:
   terraform_version:
     description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
     required: true
-   tf_vars:
+  tf_vars:
     description: '[array<string>] Variables to be parsed into terraform'
 
 runs:
