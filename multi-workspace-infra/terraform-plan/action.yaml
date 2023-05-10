@@ -13,16 +13,6 @@ inputs:
   github_token:
     description: '[secret] Github token for plan commenter to use.'
     required: true
-  artifactory_enabled:
-    description: '[bool] (i.e. true/false) Whether or not the repo uses artifactory for the helm chart.'
-    default: 'false'
-    required: false
-  artifactory_read_access_token:
-    description: '[secret] Read access token for artifactory.'
-    required: false
-  artifactory_helm_chart_path:
-    description: '[string] Path to helm chart for artifactory.'
-    required: false
   enable_plan_commenter:
     description: '[bool] (i.e. true/false) Enable the tf plan commenter.'
     required: false
@@ -85,12 +75,6 @@ runs:
       with:
         ref: ${{ inputs.checkout_ref }}
         lfs: true
-    - name: Helm Repo Update
-      if: ${{ inputs.artifactory_enabled == 'true' }}
-      run: |
-        helm repo add terminus https://getterminus.jfrog.io/artifactory/default-helm/ --username developer --password ${{ inputs.artifactory_read_access_token }}
-        helm repo update
-      shell: bash
     # Adding the below step to allow us to reacquire the eks token after the 15 min timeout
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -176,11 +160,6 @@ runs:
       id: pre-apply
       run: |
         terraform apply -target=${{ inputs.pre_apply_target }} -var-file=vars/${{ inputs.terraform_workspace }}.tfvars -input=false -auto-approve
-      shell: bash
-    - name: Helm Dependency Update
-      if: ${{ inputs.artifactory_enabled == 'true' }}
-      run: |
-        find helm/charts -maxdepth 1 -not -path "helm/charts" | xargs -n 1 helm dependency update
       shell: bash
     - name: TF Lint - Config Hash
       if: ${{ inputs.enable_tflint == 'true' }}
