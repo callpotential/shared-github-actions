@@ -67,6 +67,7 @@ runs:
       with:
         terraform_version: ${{ inputs.terraform_version }}
     - name: TF Apply
+      working-directory: ./infrastructure
       run: |
         if [ ! -z ${{ inputs.datadog_api_key }} ]
         then
