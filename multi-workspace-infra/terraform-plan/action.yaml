@@ -9,7 +9,8 @@ inputs:
     required: true
   terraform_workspace:
     description: '[string] (i.e. ninja/prod-east) TF Workspace.'
-    required: true
+    default: "default"
+    required: false
   github_token:
     description: '[secret] Github token for plan commenter to use.'
     required: true

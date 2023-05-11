@@ -76,7 +76,7 @@ runs:
         terraform version
         terraform init -lock=false -input=false
         terraform validate
-        terraform workspace select ${{ inputs.terraform_workspace }}
+        terraform workspace select ${{ inputs.terraform_workspace }} || terraform workspace new ${{ inputs.terraform_workspace }}
         terraform workspace show
         terraform plan $(printf -- '-var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars) -lock=true -lock-timeout=0s -input=false -out=tfplan
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
