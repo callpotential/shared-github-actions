@@ -1,20 +1,20 @@
-name: 'Docker Copy and Push'
-description: 'Copies an image from ghcr and pushes it to ecr'
+name: "Docker Copy and Push"
+description: "Copies an image from ghcr and pushes it to ecr"
 inputs:
   service_name:
-    description: '[string] Push the docker image?'
+    description: "[string] Push the docker image?"
     required: true
   environment:
-    description: '[string] Environment to push to (default, stage, prod)'
+    description: "[string] Environment to push to (default, stage, prod)"
     required: true
   ecr_image_version:
-    description: '[string] ECR image version'
+    description: "[string] ECR image version"
     required: true
   ghcr_image_version:
-    description: '[string] GHCR image version'
+    description: "[string] GHCR image version"
     required: true
   aws_account_id:
-    description: '[number] AWS account id to push the ECR image into'
+    description: "[number] AWS account id to push the ECR image into"
     required: true
 
 runs:
@@ -57,12 +57,15 @@ runs:
         GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
         ACCOUNT_ID: ${{ inputs.aws_account_id }}
       run: |
+        echo "ECR_EXISTS=true" >> $GITHUB_ENV
+        aws ecr describe-repositories --repository-names $IMAGE_NAME || echo "ECR_EXISTS=false" >> $GITHUB_ENV
         echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$ECR_IMAGE_VERSION" >> $GITHUB_ENV
         echo "GHCR_IMAGE_URI=ghcr.io/$IMAGE_NAME:$GHCR_IMAGE_VERSION" >> $GITHUB_ENV
 
     # Switch to the target account to log into ecr and push
     - name: Configure AWS credentials for ${{ inputs.aws_account_id }} account
       uses: aws-actions/configure-aws-credentials@v2
+      if: env.ECR_EXISTS == 'true'
       with:
         aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
@@ -73,6 +76,7 @@ runs:
 
     - name: Log into registry ${{ env.REGISTRY }}
       uses: docker/login-action@v2
+      if: env.ECR_EXISTS == 'true'
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -80,11 +84,13 @@ runs:
 
     - name: Login to ECR
       uses: docker/login-action@v2
+      if: env.ECR_EXISTS == 'true'
       with:
         registry: ${{ inputs.aws_account_id }}.dkr.ecr.us-west-2.amazonaws.com
 
     # Pull image from GitHub, re-tag, and push to AWS ecr
     - name: Pull image from ghcr and push to ecr
+      if: env.ECR_EXISTS == 'true'
       shell: bash
       run: |
         docker pull $GHCR_IMAGE_URI
@@ -93,6 +99,7 @@ runs:
 
     # Switch back to shared account for terraform apply
     - name: Configure AWS credentials to shared acccount
+      if: env.ECR_EXISTS == 'true'
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
