@@ -74,7 +74,7 @@ runs:
     - name: Log into registry ${{ env.REGISTRY }}
       uses: docker/login-action@v2
       with:
-        registry: ${{ env.REGISTRY }}
+        registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ env.GITHUB_TOKEN }}
 
@@ -87,7 +87,6 @@ runs:
     - name: Pull image from ghcr and push to ecr
       shell: bash
       run: |
-        aws ecr describe-repositories --repository-names $IMAGE_NAME || exit 0
         docker pull $GHCR_IMAGE_URI
         docker tag $GHCR_IMAGE_URI $ECR_IMAGE_URI
         docker push $ECR_IMAGE_URI
