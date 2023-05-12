@@ -10,7 +10,7 @@ inputs:
     required: true
   environment:
     description: '[string] Environment to push to (default, stage, prod)'
-    required: false
+    required: true
   registry:
     description: '[string] Registry to push the image to'
     default: "ghcr.io"
@@ -38,7 +38,6 @@ runs:
         inputs[environment]="$ENVIRONMENT"
         inputs[registry]="$REGISTRY"
         inputs[sub_dir]="$SUB_DIR"
-
 
         validateInput inputs
       shell: bash
