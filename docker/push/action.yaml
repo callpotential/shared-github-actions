@@ -1,5 +1,5 @@
-name: 'Terraform Apply - Multiple Workspaces'
-description: 'Runs a terraform apply for a repo with a multiple workspaces (i.e. most terminus repos).'
+name: 'Docker Build and Push'
+description: 'Builds the docker image inside the sub directory and pushes it to the registry'
 inputs:
   push:
     description: '[string] Push the docker image?'
@@ -14,6 +14,9 @@ inputs:
   registry:
     description: '[string] Registry to push the image to'
     default: "ghcr.io"
+  sub_dir:
+    description: '[string] The directory to find the dockerfile'
+    required: true
 
 runs:
   using: "composite"
@@ -24,6 +27,7 @@ runs:
         SERVICE_NAME: ${{ inputs.service_name }}
         ENVIRONMENT: ${{ inputs.environment }}
         REGISTRY: ${{ inputs.registry }}
+        SUB_DIR: ${{ inputs.sub_dir }}
       run: |
         cd ${{ github.action_path }}
         source ../../shell-scripts/input-validator.sh
@@ -32,7 +36,9 @@ runs:
         inputs[push]="$PUSH"
         inputs[service_name]="$SERVICE_NAME"
         inputs[environment]="$ENVIRONMENT"
-        inputs[registry]="$registry"
+        inputs[registry]="$REGISTRY"
+        inputs[sub_dir]="$SUB_DIR"
+
 
         validateInput inputs
       shell: bash
@@ -82,7 +88,7 @@ runs:
       id: build-and-push
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
       with:
-        context: "{{defaultContext}}:${{ inputs.service_name }}"
+        context: "{{defaultContext}}:${{ inputs.sub_dir }}"
         push: ${{ inputs.push }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
