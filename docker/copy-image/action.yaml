@@ -96,11 +96,3 @@ runs:
         docker tag $GHCR_IMAGE_URI $ECR_IMAGE_URI
         docker push $ECR_IMAGE_URI
 
-    # Switch back to shared account for terraform apply
-    - name: Configure AWS credentials to shared acccount
-      if: env.ECR_EXISTS == 'true'
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
-        aws-region: us-west-2
