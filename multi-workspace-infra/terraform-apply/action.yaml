@@ -56,12 +56,12 @@ runs:
     #     state: pending
     #     deployment-id: ${{ github.event.deployment.id }}
     # Adding the below step to allow us to reacquire the eks token after the 15 min timeout
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
-        aws-region: us-west-2
+    # - name: Configure AWS credentials
+    #   uses: aws-actions/configure-aws-credentials@v2
+    #   with:
+    #     aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
+    #     aws-region: us-west-2
     - name: HashiCorp - Setup Terraform
       uses: hashicorp/setup-terraform@v1.2.1
       with:
