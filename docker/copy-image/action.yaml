@@ -64,8 +64,8 @@ runs:
     - name: Configure AWS credentials for ${{ inputs.aws_account_id }} account
       uses: aws-actions/configure-aws-credentials@v2
       with:
-        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ env.GH_AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
         aws-region: us-west-2
         role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/terraform-runnner-role
         role-duration-seconds: 3600 # 60 min
@@ -96,6 +96,6 @@ runs:
     - name: Configure AWS credentials to shared acccount
       uses: aws-actions/configure-aws-credentials@v2
       with:
-        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ env.GH_AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
         aws-region: us-west-2
