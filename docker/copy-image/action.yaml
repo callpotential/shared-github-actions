@@ -1,0 +1,104 @@
+name: "Docker Copy and Push"
+description: "Copies an image from ghcr and pushes it to ecr"
+inputs:
+  service_name:
+    description: "[string] Push the docker image?"
+    required: true
+  environment:
+    description: "[string] Environment to push to (default, stage, prod)"
+    required: true
+  ecr_image_version:
+    description: "[string] ECR image version"
+    required: true
+  ghcr_image_version:
+    description: "[string] GHCR image version"
+    required: true
+  aws_account_id:
+    description: "[number] AWS account id to push the ECR image into"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Inputs
+      env:
+        SERVICE_NAME: ${{ inputs.service_name }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        ECR_IMAGE_VERSION: ${{ inputs.ecr_image_version }}
+        GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
+        AWS_ACCOUNT_ID: ${{ inputs.aws_account_id }}
+      run: |
+        cd ${{ github.action_path }}
+        source ../../shell-scripts/input-validator.sh
+
+        declare -A inputs
+        inputs[service_name]="$SERVICE_NAME"
+        inputs[environment]="$ENVIRONMENT"
+        inputs[ecr_image_version]="$ECR_IMAGE_VERSION"
+        inputs[ghcr_image_version]="$GHCR_IMAGE_VERSION"
+        inputs[aws_account_id]="$AWS_ACCOUNT_ID"
+
+        validateInput inputs
+      shell: bash
+
+    - name: "Set image names"
+      shell: bash
+      env:
+        service_name: ${{ inputs.service_name }}
+        repo: ${{ github.repository }}
+        environment: ${{ inputs.environment }}
+      run: |
+        echo "IMAGE_NAME=$repo/$environment/$service_name" >> $GITHUB_ENV
+
+    # Switch to the target account to log into ecr and push
+    - name: Configure AWS credentials for ${{ inputs.aws_account_id }} account
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
+        aws-region: us-west-2
+        role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/terraform-runnner-role
+        role-duration-seconds: 3600 # 60 min
+        role-skip-session-tagging: true
+
+    - name: "Set image uris"
+      shell: bash
+      env:
+        ECR_IMAGE_VERSION: ${{ inputs.ecr_image_version }}
+        GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
+        ACCOUNT_ID: ${{ inputs.aws_account_id }}
+      run: |
+        echo "ECR_EXISTS=true" >> $GITHUB_ENV
+        aws ecr describe-repositories --repository-names $IMAGE_NAME || echo "ECR_EXISTS=false" >> $GITHUB_ENV
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$ECR_IMAGE_VERSION" >> $GITHUB_ENV
+        echo "GHCR_IMAGE_URI=ghcr.io/$IMAGE_NAME:$GHCR_IMAGE_VERSION" >> $GITHUB_ENV
+
+    - name: Log into registry ${{ env.REGISTRY }}
+      uses: docker/login-action@v2
+      if: env.ECR_EXISTS == 'true'
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ env.GITHUB_TOKEN }}
+
+    - name: Login to ECR
+      uses: docker/login-action@v2
+      if: env.ECR_EXISTS == 'true'
+      with:
+        registry: ${{ inputs.aws_account_id }}.dkr.ecr.us-west-2.amazonaws.com
+
+    # Pull image from GitHub, re-tag, and push to AWS ecr
+    - name: Pull image from ghcr and push to ecr
+      if: env.ECR_EXISTS == 'true'
+      shell: bash
+      run: |
+        docker pull $GHCR_IMAGE_URI
+        docker tag $GHCR_IMAGE_URI $ECR_IMAGE_URI
+        docker push $ECR_IMAGE_URI
+
+    - name: Configure AWS credentials for shared account
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
+        aws-region: us-west-2
