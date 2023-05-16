@@ -17,9 +17,12 @@ inputs:
     description: "[number] AWS account id to push the ECR image into"
     required: true
 outputs:
-  IMAGE_NAME: ${{ steps.image-name.outputs.IMAGE_NAME }}
-  ECR_IMAGE_URI: ${{ steps.image-uri.outputs.ECR_IMAGE_URI }}
-  GHCR_IMAGE_URI: ${{ steps.image-uri.outputs.GHCR_IMAGE_URI }}
+  IMAGE_NAME:
+    description: "[string] The name of the copied image"
+    value: ${{ steps.image-name.outputs.IMAGE_NAME }}
+  ECR_IMAGE_URI:
+    description: "[string] Full uri with tag of the image uploaded to ecr"
+    value: ${{ steps.image-uri.outputs.ECR_IMAGE_URI }}
 
 runs:
   using: "composite"
