@@ -56,8 +56,8 @@ runs:
         repo: ${{ github.repository }}
         environment: ${{ inputs.environment }}
       run: |
-        echo "IMAGE_NAME=$repo/$environment/$service_name" >> $GITHUB_ENV
-        echo "IMAGE_NAME=$repo/$environment/$service_name" >> $GITHUB_OUTPUT
+        echo "IMAGE_NAME=$repo/$environment" >> $GITHUB_ENV
+        echo "IMAGE_NAME=$repo/$environment" >> $GITHUB_OUTPUT
 
     # Switch to the target account to log into ecr and push
     - name: Configure AWS credentials for ${{ inputs.aws_account_id }} account
@@ -74,15 +74,16 @@ runs:
       id: image-uri
       shell: bash
       env:
+        SERVICE_NAME: ${{ inputs.service_name }}
         ECR_IMAGE_VERSION: ${{ inputs.ecr_image_version }}
         GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
         ACCOUNT_ID: ${{ inputs.aws_account_id }}
       run: |
         echo "ECR_EXISTS=true" >> $GITHUB_ENV
         aws ecr describe-repositories --repository-names $IMAGE_NAME || echo "ECR_EXISTS=false" >> $GITHUB_ENV
-        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$ECR_IMAGE_VERSION" >> $GITHUB_ENV
-        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$ECR_IMAGE_VERSION" >> $GITHUB_OUTPUT
-        echo "GHCR_IMAGE_URI=ghcr.io/$IMAGE_NAME:$GHCR_IMAGE_VERSION" >> $GITHUB_ENV
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$SERVICE_NAME-$ECR_IMAGE_VERSION" >> $GITHUB_ENV
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:$SERVICE_NAME-$ECR_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "GHCR_IMAGE_URI=ghcr.io/$IMAGE_NAME:$SERVICE_NAME-$GHCR_IMAGE_VERSION" >> $GITHUB_ENV
 
     - name: Log into registry ${{ env.REGISTRY }}
       uses: docker/login-action@v2
