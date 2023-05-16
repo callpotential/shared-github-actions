@@ -16,6 +16,11 @@ inputs:
   aws_account_id:
     description: "[number] AWS account id to push the ECR image into"
     required: true
+outputs:
+  IMAGE_NAME: ${{ env.IMAGE_NAME }}
+  ECR_EXISTS: ${{ env.ECR_EXISTS }}
+  ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+  GHCR_IMAGE_URI: ${{ env.GHCR_IMAGE_URI }}
 
 runs:
   using: "composite"
