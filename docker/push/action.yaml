@@ -21,6 +21,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Validate Inputs
       env:
         PUSH: ${{ inputs.push }}
@@ -90,12 +92,13 @@ runs:
       id: build-and-push
       uses: docker/build-push-action@v4
       with:
-        context: "{{defaultContext}}:${{ inputs.sub_dir }}"
+        context: .
         push: ${{ inputs.push }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        file: "${{ inputs.sub_dir }}/Dockerfile"
 
     # Sign the resulting Docker image digest except on PRs.
     # This will only write to the public Rekor transparency log when the Docker
