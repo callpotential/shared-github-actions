@@ -21,6 +21,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Validate Inputs
       env:
         PUSH: ${{ inputs.push }}
@@ -49,7 +51,7 @@ runs:
         repo: ${{ github.repository }}
         environment: ${{ inputs.environment }}
       run: |
-        echo "IMAGE_NAME=$repo/$environment/$service_name" >> $GITHUB_ENV
+        echo "IMAGE_NAME=$repo/$environment" >> $GITHUB_ENV
 
     # Install the cosign tool except on PR
     # https://github.com/sigstore/cosign-installer
@@ -80,6 +82,9 @@ runs:
       uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,enable=true,priority=600,prefix=${{ inputs.service_name }}-,suffix=,event=branch
+          type=ref,enable=true,priority=600,prefix=${{ inputs.service_name }}-,suffix=,event=tag
 
     # Build and push Docker image with Buildx (don't push on PR)
     # https://github.com/docker/build-push-action
@@ -87,12 +92,13 @@ runs:
       id: build-and-push
       uses: docker/build-push-action@v4
       with:
-        context: "{{defaultContext}}:${{ inputs.sub_dir }}"
+        context: .
         push: ${{ inputs.push }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        file: "${{ inputs.sub_dir }}/Dockerfile"
 
     # Sign the resulting Docker image digest except on PRs.
     # This will only write to the public Rekor transparency log when the Docker
