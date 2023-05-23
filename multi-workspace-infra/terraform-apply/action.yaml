@@ -1,5 +1,5 @@
 name: 'Terraform Apply - Multiple Workspaces'
-description: 'Runs a terraform apply for a repo with a multiple workspaces (i.e. most terminus repos).'
+description: 'Runs a terraform apply for a repo with a multiple workspaces.'
 inputs:
   ssh_key:
     description: '[secret] GitHub SSH Key for pulling repo.'
