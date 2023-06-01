@@ -35,7 +35,7 @@ runs:
         declare -A inputs
         inputs[ssh_key]="$SSH_KEY"
         inputs[terraform_version]="$TERRAFORM_VERSION"
-        inputs[terraform_workspace]="TERRAFORM_WORKSPACE"
+        inputs[terraform_workspace]="$TERRAFORM_WORKSPACE"
 
         validateInput inputs
       shell: bash
