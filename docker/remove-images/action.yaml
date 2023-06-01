@@ -1,15 +1,12 @@
-name: 'Remove GHCR Image(s)'
-description: 'Destroys the docker image(s)'
+name: "Remove GHCR Image(s)"
+description: "Destroys the docker image(s)"
 inputs:
   min_versions_to_keep:
-    description: '[int] Number of latest versions to keep'
+    description: "[int] Number of latest versions to keep"
     required: false
-    default: '0'
-  service_name:
-    description: '[string] Push the docker image?'
-    required: true
+    default: "0"
   environment:
-    description: '[string] Environment to push to (default, stage, prod)'
+    description: "[string] Environment to push to (default, stage, prod)"
     required: true
 
 runs:
@@ -20,7 +17,6 @@ runs:
     - name: Validate Inputs
       env:
         MIN_VERSIONS_TO_KEEP: ${{ inputs.min_versions_to_keep }}
-        SERVICE_NAME: ${{ inputs.service_name }}
         ENVIRONMENT: ${{ inputs.environment }}
         REGISTRY: ${{ inputs.registry }}
         SUB_DIR: ${{ inputs.sub_dir }}
@@ -30,7 +26,6 @@ runs:
 
         declare -A inputs
         inputs[min_versions_to_keep]="$MIN_VERSIONS_TO_KEEP"
-        inputs[service_name]="$SERVICE_NAME"
         inputs[environment]="$ENVIRONMENT"
 
         validateInput inputs
@@ -39,7 +34,6 @@ runs:
     - name: "Set image names"
       shell: bash
       env:
-        service_name: ${{ inputs.service_name }}
         repo: ${{ github.repository }}
         environment: ${{ inputs.environment }}
       run: |
@@ -47,8 +41,8 @@ runs:
 
     - name: "Remove GHCR Images"
       uses: actions/delete-package-versions@v4
-      with: 
+      with:
         package-name: ${{ env.IMAGE_NAME }}
-        package-type: 'container'
+        package-type: "container"
         min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
         delete-only-pre-release-versions: "false"
