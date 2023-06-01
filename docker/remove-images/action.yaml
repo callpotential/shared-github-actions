@@ -31,18 +31,10 @@ runs:
         validateInput inputs
       shell: bash
 
-    - name: "Set image names"
-      shell: bash
-      env:
-        repo: ${{ github.repository }}
-        environment: ${{ inputs.environment }}
-      run: |
-        echo "IMAGE_NAME=$repo/$environment" >> $GITHUB_ENV
-
     - name: "Remove GHCR Images"
       uses: actions/delete-package-versions@v4
       with:
-        package-name: ${{ env.IMAGE_NAME }}
+        package-name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
         package-type: "container"
         min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
         delete-only-pre-release-versions: "false"
