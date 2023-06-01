@@ -34,7 +34,7 @@ runs:
     - name: "Delete ${{ inputs.environment }} package"
       shell: bash
       env:
-        owner: ${{ github.event.repository.owner }}
+        owner: ${{ github.repository_owner }}
         repo_name: ${{ github.event.repository.name }}
         environment: ${{ inputs.environment }}
       run: |
