@@ -13,7 +13,7 @@ inputs:
     required: true
   service_name:
     description: "[string] Name of the service to remove images for"
-    required: true  
+    required: true
 
 runs:
   using: "composite"
@@ -28,3 +28,10 @@ runs:
         package-type: "container"
         min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
         delete-only-pre-release-versions: "false"
+
+    - name: Clean up all untagged versions
+      uses: actions/delete-package-versions@v4
+      with:
+        package-name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
+        package-type: "container"
+        delete-only-untagged-versions: "true"
