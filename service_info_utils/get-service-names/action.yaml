@@ -1,0 +1,27 @@
+name: "Get Service Names"
+description: "Gets a JSON list of service names based on the directory"
+inputs:
+  services_dir:
+    description: "[string] Directory that contains all of the services"
+    required: true
+outputs:
+  service_names:
+    description: "[jsonArray(string)] Json array of service names"
+    value: ${{ steps.get-service-info.outputs.service_names }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Get Service Info
+      id: get-service-info
+      env:
+        SERVICES_DIR: ${{ inputs.services_dir }}
+      run: |
+        cd ${{ github.action_path }}
+        source ../../shell-scripts/service-utils.sh
+
+        service_names=getServiceNames $SERVICES_DIR
+        echo "service_names=$service_names" >> $GITHUB_OUTPUT
+      shell: bash

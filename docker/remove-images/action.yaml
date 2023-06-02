@@ -8,47 +8,23 @@ inputs:
   environment:
     description: "[string] Environment to push to (default, stage, prod)"
     required: true
+  ghcr_image_version:
+    description: "[string] GHCR image version"
+    required: true
+  service_name:
+    description: "[string] Name of the service to remove images for"
+    required: true  
 
 runs:
   using: "composite"
   steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Validate Inputs
-      env:
-        MIN_VERSIONS_TO_KEEP: ${{ inputs.min_versions_to_keep }}
-        ENVIRONMENT: ${{ inputs.environment }}
-        REGISTRY: ${{ inputs.registry }}
-        SUB_DIR: ${{ inputs.sub_dir }}
-      run: |
-        cd ${{ github.action_path }}
-        source ../../shell-scripts/input-validator.sh
-
-        declare -A inputs
-        inputs[min_versions_to_keep]="$MIN_VERSIONS_TO_KEEP"
-        inputs[environment]="$ENVIRONMENT"
-
-        validateInput inputs
-      shell: bash
-
-    - name: "Delete ${{ inputs.environment }} package"
-      shell: bash
-      env:
-        owner: ${{ github.repository_owner }}
-        repo_name: ${{ github.event.repository.name }}
-        environment: ${{ inputs.environment }}
-      run: |
-        curl -L \
-          -X DELETE \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: token $GITHUB_TOKEN"\
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/orgs/$owner/packages/container/$repo_name/$environment
-
-    # - name: "Remove GHCR Images"
-    #   uses: actions/delete-package-versions@v4
-    #   with:
-    #     package-name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
-    #     package-type: "container"
-    #     min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
-    #     delete-only-pre-release-versions: "false"
+    - name: "Remove ${{ inputs.ghcr_image_version }} GHCR Images from ${{ inputs.environment }}"
+      uses: actions/delete-package-versions@v4
+      with:
+        package-version-ids: "${{ inputs.service_name }}-${{ inputs.ghcr_image_version }}"
+        package-name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
+        package-type: "container"
+        min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
+        delete-only-pre-release-versions: "false"

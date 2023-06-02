@@ -60,4 +60,5 @@ runs:
         terraform workspace show
         terraform plan $(printf -- '-var-file=%s ' vars/default*.tfvars) -lock=true -lock-timeout=0s -destroy -input=false -out=tfplan
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
+        terraform workspace delete ${{ inputs.terraform_workspace }}
       shell: bash
