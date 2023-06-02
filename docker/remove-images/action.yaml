@@ -26,14 +26,14 @@ runs:
       shell: bash
       env:
         package_version: "${{ inputs.service_name }}-${{ inputs.ghcr_image_version }}"
-        package_name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
+        package_name: "${{ github.event.repository.name }}%2F${{ inputs.environment }}"
         package_type: "container"
         org: ${{ github.repository_owner }}
       run: |
         id=$(gh api \
           -H "Accept: application/vnd.github+json" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
-          orgs/$org/packages/$package_type/$package_name/versions \
+          /orgs/$org/packages/$package_type/$package_name/versions \
           | jq '[.[]|select(.name=="$package_version")][0]|.id')
         echo "id=$id" >> $GITHUB_OUTPUT
 
