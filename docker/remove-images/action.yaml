@@ -25,6 +25,7 @@ runs:
       name: Get pacakge id
       shell: bash
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         package_version: "${{ inputs.service_name }}-${{ inputs.ghcr_image_version }}"
         package_name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
         package_type: "container"
