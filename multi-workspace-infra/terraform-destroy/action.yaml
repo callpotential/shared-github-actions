@@ -56,7 +56,7 @@ runs:
         terraform version
         terraform init -lock=false -input=false
         terraform validate
-        terraform workspace select ${{ inputs.terraform_workspace }} || echo "Terraform workspace is already deleted, gracefully exiting..." && exit 0
+        terraform workspace select ${{ inputs.terraform_workspace }} || (echo "Terraform workspace is already deleted, gracefully exiting..." && exit 0)
         terraform workspace show
         terraform plan $(printf -- '-var-file=%s ' vars/default*.tfvars) -lock=true -lock-timeout=0s -destroy -input=false -out=tfplan
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan

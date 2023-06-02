@@ -20,6 +20,6 @@ runs:
       run: |
         source ${{ github.action_path }}/../../shell-scripts/service-utils.sh
 
-        service_names=getDirNames .
+        service_names=`getDirNames .`
         echo "service_names=$service_names" >> $GITHUB_OUTPUT
       shell: bash
