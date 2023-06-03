@@ -43,3 +43,4 @@ runs:
           echo "WORKSPACE=$lowerBranch" >> $GITHUB_OUTPUT
           echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
           echo "ACCOUNT_ID=$non_prod_id" >> $GITHUB_OUTPUT
+        fi
