@@ -7,12 +7,16 @@ inputs:
   WORKSPACE:
     description: "Current terraform workspace, this is used to set the ECR details."
     required: true
+  CREATE_URI:
+    description: "(Defaults true) Boolean to enable URI creation"
+    required: false
+    default: "true"
   SERVICE_NAME:
-    description: "Name of the service to generate the details for."
-    required: true
+    description: "(Required if CREATE_URI is true) Name of the service to generate the details for."
+    required: false
   AWS_ACCOUNT_ID:
-    description: "AWS account id for the ECR image's uri"
-    required: true
+    description: "(Required if CREATE_URI is true) AWS account id for the ECR image's uri"
+    required: false
 outputs:
   GHCR_IMAGE_NAME: 
     description: "Generated name of the GHCR image."
@@ -22,7 +26,7 @@ outputs:
     value: ${{ steps.image-setup.outputs.GHCR_IMAGE_VERSION }}
   GHCR_IMAGE_URI: 
     description: "Generated uri of the GHCR image."
-    value: ${{ steps.image-setup.outputs.GHCR_IMAGE_URI }}
+    value: ${{ steps.image-setup.outputs.GHCR_IMAGE_URI || '' }}
 
   ECR_IMAGE_NAME: 
     description: "Generated name of the ECR image."
@@ -32,7 +36,7 @@ outputs:
     value: ${{ steps.image-setup.outputs.ECR_IMAGE_VERSION }}
   ECR_IMAGE_URI: 
     description: "Generated uri of the ECR image."
-    value: ${{ steps.image-setup.outputs.ECR_IMAGE_URI }}
+    value: ${{ steps.image-setup.outputs.ECR_IMAGE_URI || '' }}
 
 runs:
   using: "composite"
@@ -55,7 +59,8 @@ runs:
         ECR_TRIMMED_IMAGE_VERSION=$(echo $ecr_image_version | tr / -)
         echo "ECR_IMAGE_VERSION=$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
         
-    - id: image-uri
+    - if: ${{ inputs.CREATE_URI == 'true' }}
+      id: image-uri
       name: "Set image uris"
       shell: bash
       env:
