@@ -22,7 +22,7 @@ inputs:
 outputs:
   ECR_IMAGE_NAME:
     description: "[string] The name of the copied image into ecr"
-    value: ${{ steps.image-name.outputs.IMAGE_NAME }}
+    value: ${{ steps.image-name.outputs.ECR_IMAGE_NAME }}
   ECR_IMAGE_URI:
     description: "[string] Full uri with tag of the image uploaded to ecr"
     value: ${{ steps.image-uri.outputs.ECR_IMAGE_URI }}
