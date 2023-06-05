@@ -73,8 +73,9 @@ runs:
     - name: TF Apply
       working-directory: ./infrastructure
       run: |
-        shared_workspace=${{ inputs.terraform_workspace }}
-        if [ ${{ inputs.terraform_workspace }} != "prod" ] || [ ${{ inputs.terraform_workspace }} != "stage" ] ; then
+        if [ ${{ inputs.terraform_workspace }} == "prod" ] || [ ${{ inputs.terraform_workspace }} == "stage" ] ; then
+          shared_workspace=${{ inputs.terraform_workspace }}
+        else
           shared_workspace=default
         fi
 
