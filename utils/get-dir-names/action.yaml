@@ -35,8 +35,9 @@ runs:
         source ${{ github.action_path }}/../../shell-scripts/service-utils.sh
 
         for service in $(echo "$service_names" | jq -r '.[]'); do 
+        echo "getting process info for $service"
         process_name=$(getDirNames ./"$service"/dockerfiles)
-        process_names=$(echo "$process_name $process_names" | jq -s "add")
+        process_names=$(echo "$process_name $process_names" | jq --compact-output -s "add"); 
         done
         echo "process_names=$process_names" >> $GITHUB_OUTPUT
       shell: bash
