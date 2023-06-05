@@ -1,6 +1,9 @@
 name: "Get Environment"
 description: "Get environment settings based the current branch."
 inputs:
+  GITHUB_REF:
+    description: "Github ref name to use to get env details from."
+    required: true
   PROD_AWS_ACCOUNT_ID:
     description: "Will be returned as the output 'AWS_ACCOUNT_ID' if the env is prod"
     required: true
@@ -27,10 +30,11 @@ runs:
       env:
         prod_id: ${{ inputs.PROD_AWS_ACCOUNT_ID }}
         non_prod_id: ${{ inputs.NON_PROD_AWS_ACCOUNT_ID }}
-        ref: ${{ github.ref }}
-        branch: ${{ github.ref_name }}
+        gh_ref: ${{ inputs.GITHUB_REF }}
       run: |
-        if [[ $ref = refs/tags/v* ]] ; then
+        branch=${gh_ref#refs/*/}
+        fi
+        if [[ $gh_ref = refs/tags/v* ]] ; then
           echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
           echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
           echo "ACCOUNT_ID=$prod_id" >> $GITHUB_OUTPUT
