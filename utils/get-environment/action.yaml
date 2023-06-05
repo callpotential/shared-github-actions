@@ -30,7 +30,6 @@ runs:
         gh_ref: ${{ github.event.ref || github.ref }}
       run: |
         branch=${gh_ref#refs/*/}
-        fi
         if [[ $gh_ref = refs/tags/v* ]] ; then
           echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
           echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
