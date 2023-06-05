@@ -1,0 +1,73 @@
+name: "Create Image Details"
+description: "Creates details like URI and Image Name for ECR and GHCR images."
+inputs:
+  ENVIRONMENT:
+    description: "The deployment environment"
+    required: true
+  WORKSPACE:
+    description: "Current terraform workspace, this is used to set the ECR details."
+    required: true
+  CREATE_URI:
+    description: "(Defaults true) Boolean to enable URI creation"
+    required: false
+    default: "true"
+  SERVICE_NAME:
+    description: "(Required if CREATE_URI is true) Name of the service to generate the details for."
+    required: false
+  AWS_ACCOUNT_ID:
+    description: "(Required if CREATE_URI is true) AWS account id for the ECR image's uri"
+    required: false
+outputs:
+  GHCR_IMAGE_NAME: 
+    description: "Generated name of the GHCR image."
+    value: ${{ steps.image-setup.outputs.GHCR_IMAGE_NAME }}
+  GHCR_IMAGE_VERSION: 
+    description: "Generated version of the GHCR image."
+    value: ${{ steps.image-setup.outputs.GHCR_IMAGE_VERSION }}
+  GHCR_IMAGE_URI: 
+    description: "Generated uri of the GHCR image."
+    value: ${{ steps.image-setup.outputs.GHCR_IMAGE_URI || '' }}
+
+  ECR_IMAGE_NAME: 
+    description: "Generated name of the ECR image."
+    value: ${{ steps.image-setup.outputs.ECR_IMAGE_NAME }}
+  ECR_IMAGE_VERSION: 
+    description: "Generated version of the ECR image."
+    value: ${{ steps.image-setup.outputs.ECR_IMAGE_VERSION }}
+  ECR_IMAGE_URI: 
+    description: "Generated uri of the ECR image."
+    value: ${{ steps.image-setup.outputs.ECR_IMAGE_URI || '' }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: image-setup
+      name: Setup image names
+      shell: bash
+      env:
+        repo: ${{ github.repository }}
+        environment: ${{ inputs.ENVIRONMENT }}
+        workspace: ${{ inputs.WORKSPACE }}
+        ghcr_image_version: ${{ github.ref_name }}
+        ecr_image_version: ${{ github.ref_name }}-${{ github.sha }}
+      run: |
+        echo "GHCR_IMAGE_NAME=$repo/$environment" >> $GITHUB_OUTPUT
+        GHCR_TRIMMED_IMAGE_VERSION=$(echo $ghcr_image_version | tr / -)
+        echo "GHCR_IMAGE_VERSION=$GHCR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
+
+        echo "ECR_IMAGE_NAME=$repo/$workspace" >> $GITHUB_OUTPUT
+        ECR_TRIMMED_IMAGE_VERSION=$(echo $ecr_image_version | tr / -)
+        echo "ECR_IMAGE_VERSION=$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        
+    - if: ${{ inputs.CREATE_URI == 'true' }}
+      id: image-uri
+      name: "Set image uris"
+      shell: bash
+      env:
+        SERVICE_NAME: ${{ inputs.SERVICE_NAME }}
+        GHCR_IMAGE_VERSION: ${{ steps.image-setup.outputs.GHCR_IMAGE_VERSION }}
+        ECR_IMAGE_VERSION: ${{ steps.image-setup.outputs.ECR_IMAGE_VERSION }}
+        ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
+      run: |
+        echo "GHCR_IMAGE_URI=ghcr.io/$GHCR_IMAGE_NAME:$SERVICE_NAME-$GHCR_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$SERVICE_NAME-$ECR_IMAGE_VERSION" >> $GITHUB_OUTPUT

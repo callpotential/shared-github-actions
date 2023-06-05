@@ -178,7 +178,7 @@ runs:
       if: ${{ inputs.enable_tflint == 'true' }}
       with:
         token: ${{ inputs.github_token }}
-        source-repo: GetTerminus/terminus-github-actions
+        source-repo: callpotential/shared-github-actions
         source-path: tflint/.tflint.hcl
     - name: TFLint - Setup
       if: ${{ inputs.enable_tflint == 'true' }}

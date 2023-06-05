@@ -1,0 +1,46 @@
+name: "Get Environment"
+description: "Get environment settings based the current branch."
+inputs:
+  PROD_AWS_ACCOUNT_ID:
+    description: "Will be returned as the output 'AWS_ACCOUNT_ID' if the env is prod"
+    required: true
+  NON_PROD_AWS_ACCOUNT_ID:
+    description: "Will be returned as the output 'AWS_ACCOUNT_ID' if the env is non-prod"
+    required: true
+outputs:
+  AWS_ACCOUNT_ID:
+    description: "AWS account id that reflects the environment"
+    value: ${{ steps.env-setup.outputs.ACCOUNT_ID }}
+  WORKSPACE:
+    description: "Terraform workspace($branchName, stage, prod) generated from the current branch"
+    value: ${{ steps.env-setup.outputs.WORKSPACE }}
+  ENVIRONMENT:
+    description: "ENVIRONMENT(dev, stage, prod) generated from the current branch"
+    value: ${{ steps.env-setup.outputs.ENVIRONMENT }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: env-setup
+      name: "Setup environment"
+      shell: bash
+      env:
+        prod_id: ${{ inputs.PROD_AWS_ACCOUNT_ID }}
+        non_prod_id: ${{ inputs.NON_PROD_AWS_ACCOUNT_ID }}
+        ref: ${{ github.ref }}
+        branch: ${{ github.ref_name }}
+      run: |
+        if [[ $ref = refs/tags/v* ]] ; then
+          echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
+          echo "ACCOUNT_ID=$prod_id" >> $GITHUB_OUTPUT
+        elif [ "$branch" = "master" ] ; then
+          echo "WORKSPACE=stage" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=stage" >> $GITHUB_OUTPUT
+          echo "ACCOUNT_ID=$non_prod_id" >> $GITHUB_OUTPUT
+        else
+          lowerBranch=$(echo "$branch" | tr '[:upper:]' '[:lower:]')
+          echo "WORKSPACE=$lowerBranch" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
+          echo "ACCOUNT_ID=$non_prod_id" >> $GITHUB_OUTPUT
+        fi

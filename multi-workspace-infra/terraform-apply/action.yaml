@@ -1,5 +1,5 @@
 name: 'Terraform Apply - Multiple Workspaces'
-description: 'Runs a terraform apply for a repo with a multiple workspaces (i.e. most terminus repos).'
+description: 'Runs a terraform apply for a repo with a multiple workspaces.'
 inputs:
   ssh_key:
     description: '[secret] GitHub SSH Key for pulling repo.'
@@ -8,9 +8,13 @@ inputs:
     description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
     required: true
   terraform_workspace:
-    description: '[string] (i.e. ninja/prod-east) TF Workspace.'
+    description: '[string] (i.e. $branchName/stage/prod) TF Workspace.'
     required: false
     default: default
+  terraform_targets:
+    description: "[string] (i.e aws_ecr_repository.name module.name) Terraform resources to target during the plan. Seperate multiple resources with a space ' ' . See https://developer.hashicorp.com/terraform/tutorials/state/resource-targeting"
+    required: false
+    default: ""
   # datadog_api_key:
   #   description: '[secret] DataDog API Key. Required for the git-metadata upload.'
   #   required: false
@@ -35,7 +39,7 @@ runs:
         declare -A inputs
         inputs[ssh_key]="$SSH_KEY"
         inputs[terraform_version]="$TERRAFORM_VERSION"
-        inputs[terraform_workspace]="TERRAFORM_WORKSPACE"
+        inputs[terraform_workspace]="$TERRAFORM_WORKSPACE"
 
         validateInput inputs
       shell: bash
@@ -56,12 +60,12 @@ runs:
     #     state: pending
     #     deployment-id: ${{ github.event.deployment.id }}
     # Adding the below step to allow us to reacquire the eks token after the 15 min timeout
-    # - name: Configure AWS credentials
-    #   uses: aws-actions/configure-aws-credentials@v2
-    #   with:
-    #     aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
-    #     aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
-    #     aws-region: us-west-2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
+        aws-region: us-west-2
     - name: HashiCorp - Setup Terraform
       uses: hashicorp/setup-terraform@v1.2.1
       with:
@@ -69,17 +73,21 @@ runs:
     - name: TF Apply
       working-directory: ./infrastructure
       run: |
-        if [ ! -z ${{ inputs.datadog_api_key }} ]
-        then
-          echo "Setting DATADOG_API_KEY to ${{ inputs.datadog_api_key }} from inputs.datadog_api_key"
-          export DATADOG_API_KEY=${{ inputs.datadog_api_key }}
+        shared_workspace=${{ inputs.terraform_workspace }}
+        if [ ${{ inputs.terraform_workspace }} != "prod" ] || [ ${{ inputs.terraform_workspace }} != "stage" ] ; then
+          shared_workspace=default
         fi
+
+        if [ ! -z "${{ inputs.terraform_targets }}" -a "${{ inputs.terraform_targets }}" != " " ]; then
+          targets_option="-target=$(echo "${{ inputs.terraform_targets }}" | sed -r 's/[ ]+/ -target=/g')"
+        fi
+
         terraform version
         terraform init -lock=false -input=false
         terraform validate
         terraform workspace select ${{ inputs.terraform_workspace }} || terraform workspace new ${{ inputs.terraform_workspace }}
         terraform workspace show
-        terraform plan $(printf -- '-var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars) -lock=true -lock-timeout=0s -input=false -out=tfplan
+        terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=true -lock-timeout=0s -input=false -out=tfplan $targets_option
         terraform apply -lock=true -lock-timeout=0s -input=false tfplan
       shell: bash
     # - name: Set Github Repo to Env Variable

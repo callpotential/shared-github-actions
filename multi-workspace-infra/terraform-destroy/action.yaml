@@ -1,0 +1,65 @@
+name: 'Terraform Destroy - Multiple Workspaces'
+description: 'Runs a terraform destroy for a repo with a multiple workspaces.'
+inputs:
+  ssh_key:
+    description: '[secret] GitHub SSH Key for pulling repo.'
+    required: true
+  terraform_version:
+    description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
+    required: true
+  terraform_workspace:
+    description: '[string] (i.e. ninja/prod-east) TF Workspace.'
+    required: false
+    default: default
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Inputs
+      env:
+        SSH_KEY: ${{ inputs.ssh_key }}
+        TERRAFORM_VERSION: ${{ inputs.terraform_version }}
+        TERRAFORM_WORKSPACE: ${{ inputs.terraform_workspace }}
+      run: |
+        cd ${{ github.action_path }}
+        source ../../shell-scripts/input-validator.sh
+
+        declare -A inputs
+        inputs[ssh_key]="$SSH_KEY"
+        inputs[terraform_version]="$TERRAFORM_VERSION"
+        inputs[terraform_workspace]="$TERRAFORM_WORKSPACE"
+
+        validateInput inputs
+      shell: bash
+    - name: Install SSH Key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ inputs.ssh_key }}
+    - name: Pull
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.deployment.ref }}
+        lfs: true
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
+        aws-region: us-west-2
+    - name: HashiCorp - Setup Terraform
+      uses: hashicorp/setup-terraform@v1.2.1
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+    - name: TF Apply
+      working-directory: ./infrastructure
+      run: |
+        terraform version
+        terraform init -lock=false -input=false
+        terraform validate
+        terraform workspace select ${{ inputs.terraform_workspace }} || exit 0
+        terraform workspace show
+        terraform plan $(printf -- '-var-file=%s ' vars/default*.tfvars) -lock=true -lock-timeout=0s -destroy -input=false -out=tfplan
+        terraform apply -lock=true -lock-timeout=0s -input=false tfplan
+        terraform workspace select default
+        terraform workspace delete ${{ inputs.terraform_workspace }}
+      shell: bash

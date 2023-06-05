@@ -1,0 +1,47 @@
+name: "Remove GHCR Image(s)"
+description: "Destroys the docker image(s)"
+inputs:
+  min_versions_to_keep:
+    description: "[int] Number of latest versions to keep"
+    required: false
+    default: "0"
+  environment:
+    description: "[string] Environment to push to (default, stage, prod)"
+    required: true
+  ghcr_image_version:
+    description: "[string] GHCR image version"
+    required: true
+  service_name:
+    description: "[string] Name of the service to remove images for"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - id: get-package-id
+      name: Get pacakge id
+      shell: bash
+      env:
+        package_version: "${{ inputs.service_name }}-${{ inputs.ghcr_image_version }}"
+        package_name: "${{ github.event.repository.name }}%2F${{ inputs.environment }}"
+        package_type: "container"
+        org: ${{ github.repository_owner }}
+      run: |
+        id=$(gh api \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          /orgs/$org/packages/$package_type/$package_name/versions \
+          | jq ".[]|select(.metadata.container.tags[]==\"$package_version\")|.id")
+        echo "id=$id" >> $GITHUB_OUTPUT
+
+    - name: "Remove ${{ inputs.ghcr_image_version }} GHCR Images from ${{ inputs.environment }}"
+      uses: actions/delete-package-versions@v4
+      with:
+        package-version-ids: ${{ steps.get-package-id.outputs.id }}
+        package-name: "${{ github.event.repository.name }}/${{ inputs.environment }}"
+        package-type: "container"
+        min-versions-to-keep: ${{ inputs.min_versions_to_keep }}
+        delete-only-pre-release-versions: "false"
