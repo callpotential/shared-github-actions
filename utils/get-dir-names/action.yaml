@@ -32,7 +32,7 @@ runs:
       run: |
         source ${{ github.action_path }}/../../shell-scripts/service-utils.sh
 
-        for service in $(echo "${{ steps.get-service-names.outputs.service_names }}" | jq -r '.[]'); do
+        for service in $(echo '${{ steps.get-service-names.outputs.service_names }}' | jq -r '.[]'); do
           echo "getting process info for $service"
           result_list=$(getDirNames ./$service/dockerfiles)
           process_service_list="[]"
