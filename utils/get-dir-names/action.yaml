@@ -7,10 +7,10 @@ inputs:
 outputs:
   service_names:
     description: "[jsonArray(string)] Json array of service names"
-    value: ${{ steps.get-service-info.outputs.service_names }}
-  process_names:
-    description: "[jsonArray(string)] Json array of process names"
-    value: ${{ steps.get-process-info.outputs.process_names }}
+    value: ${{ steps.get-service-names.outputs.service_names }}
+  process_details:
+    description: "[jsonArray({})] Json array of objects containing: process_name, service_name, docker_dir, src_dir"
+    value: ${{ steps.get-process-info.outputs.process_details }}
 
 runs:
   using: "composite"
@@ -18,7 +18,7 @@ runs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Get Service Info
-      id: get-service-info
+      id: get-service-names
       working-directory: ${{ inputs.directory }}
       run: |
         source ${{ github.action_path }}/../../shell-scripts/service-utils.sh
@@ -29,15 +29,22 @@ runs:
     - name: Get Process Info
       id: get-process-info
       working-directory: ${{ inputs.directory }}
-      env:
-        service_names: ${{ steps.get-service-info.outputs.service_names }}
       run: |
         source ${{ github.action_path }}/../../shell-scripts/service-utils.sh
 
-        for service in $(echo "$service_names" | jq -r '.[]'); do 
-        echo "getting process info for $service"
-        process_name=$(getDirNames ./"$service"/dockerfiles)
-        process_names=$(echo "$process_name $process_names" | jq --compact-output -s "add"); 
+        for service in $(echo "${{ steps.get-service-names.outputs.service_names }}" | jq -r '.[]'); do
+          echo "getting process info for $service"
+          result_list=$(getDirNames ./$service/dockerfiles)
+          process_service_list="[]"
+          for process in $(echo "$result_list" | jq -r '.[]'); do
+            process_service_list=$(echo "$process_service_list" | jq ". += [{
+              \"process_name\": \"$process\",
+              \"service_name\": \"$service\",
+              \"docker_dir\": \"${{ inputs.directory }}/$service/dockerfiles/$process/\",
+              \"src_dir\": \"${{ inputs.directory }}/$service/src/\"
+            }]")
+          done
+          process_details=$(echo "$process_service_list $process_details" | jq --compact-output -s "add");
         done
-        echo "process_names=$process_names" >> $GITHUB_OUTPUT
+        echo "process_details=$process_details" >> $GITHUB_OUTPUT
       shell: bash
