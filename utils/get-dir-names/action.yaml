@@ -50,6 +50,6 @@ runs:
           done
           process_details=$(echo "$process_service_list $process_details" | jq --compact-output -s "add");
         done
-        echo "process_names=$process_names"
+        echo "process_names=$process_names" >> $GITHUB_OUTPUT
         echo "process_details=$process_details" >> $GITHUB_OUTPUT
       shell: bash
