@@ -50,7 +50,7 @@ runs:
             process_service_list=$(echo "$process_service_list" | jq ". += [{
               \"process_name\": \"$process\",
               \"service_name\": \"$service\",
-              \"service_process_name\": \"$service/$process\",
+              \"service_process_name\": \"$service.$process\",
               \"docker_dir\": \"${{ inputs.directory }}/$service/$process_sub_directory/$process/\",
               \"src_dir\": \"${{ inputs.directory }}/$service/src/\"
             }]")
