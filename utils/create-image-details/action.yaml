@@ -51,11 +51,11 @@ runs:
         ghcr_image_version: ${{ github.ref_name }}
         ecr_image_version: ${{ github.ref_name }}-${{ github.sha }}
       run: |
-        echo "GHCR_IMAGE_NAME=$repo/$environment" >> $GITHUB_OUTPUT
+        echo "GHCR_IMAGE_NAME=$repo.$environment" >> $GITHUB_OUTPUT
         GHCR_TRIMMED_IMAGE_VERSION=$(echo $ghcr_image_version | tr / -)
         echo "GHCR_IMAGE_VERSION=$GHCR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
 
-        echo "ECR_IMAGE_NAME=$repo/$workspace" >> $GITHUB_OUTPUT
+        echo "ECR_IMAGE_NAME=$repo.$workspace" >> $GITHUB_OUTPUT
         ECR_TRIMMED_IMAGE_VERSION=$(echo $ecr_image_version | tr / -)
         echo "ECR_IMAGE_VERSION=$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
         
