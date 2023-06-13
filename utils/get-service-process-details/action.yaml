@@ -43,7 +43,7 @@ runs:
 
         for service in $(echo '${{ steps.get-service-names.outputs.service_names }}' | jq -r '.[]'); do
           echo "getting process info for $service"
-          result_list=$(getDirNames ./$service/$process_sub_directory)
+          result_list=$(getDirNames ./$service/${{ inputs.process_sub_directory }})
           process_names=$(echo "$result_list $process_names" | jq --compact-output -s "add"); 
           process_service_list="[]"
           for process in $(echo "$result_list" | jq -r '.[]'); do
@@ -51,7 +51,7 @@ runs:
               \"process_name\": \"$process\",
               \"service_name\": \"$service\",
               \"service_process_name\": \"$service.$process\",
-              \"docker_dir\": \"${{ inputs.directory }}/$service/$process_sub_directory/$process/\",
+              \"docker_dir\": \"${{ inputs.directory }}/$service/${{ inputs.process_sub_directory }}/$process/\",
               \"src_dir\": \"${{ inputs.directory }}/$service/src/\"
             }]")
           done
