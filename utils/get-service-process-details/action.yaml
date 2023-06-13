@@ -2,11 +2,11 @@ name: "Get Service Process Details"
 description: "Gets a JSON information for all services and proc"
 inputs:
   service_directory:
-    description: "[string] Directory that contains all of the services"
+    description: "[string] Default: ./services | Directory that contains all of the services"
     default: "./services"
     required: true
   process_sub_directory:
-    description: "[string] Sub directory under the service directory that contains all of the process docker files. Example: If this is set to dockerfiles the path of process would be $service_directory/$service_name/dockerfile/"
+    description: "[string] Default: dockerfiles | Sub directory under the service directory that contains all of the process docker files. Example: If this is set to dockerfiles the path of process would be $service_directory/$service_name/dockerfiles/"
     default: "dockerfiles"
     required: false
   
