@@ -11,8 +11,8 @@ inputs:
     description: "(Defaults true) Boolean to enable URI creation"
     required: false
     default: "true"
-  SERVICE_NAME:
-    description: "(Required if CREATE_URI is true) Name of the service to generate the details for."
+  PROCESS_NAME:
+    description: "(Required if CREATE_URI is true) Name of the process to generate the details for."
     required: false
   AWS_ACCOUNT_ID:
     description: "(Required if CREATE_URI is true) AWS account id for the ECR image's uri"
@@ -64,10 +64,10 @@ runs:
       name: "Set image uris"
       shell: bash
       env:
-        SERVICE_NAME: ${{ inputs.SERVICE_NAME }}
+        PROCESS_NAME: ${{ inputs.PROCESS_NAME }}
         GHCR_IMAGE_VERSION: ${{ steps.image-setup.outputs.GHCR_IMAGE_VERSION }}
         ECR_IMAGE_VERSION: ${{ steps.image-setup.outputs.ECR_IMAGE_VERSION }}
         ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
       run: |
-        echo "GHCR_IMAGE_URI=ghcr.io/$GHCR_IMAGE_NAME:$SERVICE_NAME-$GHCR_IMAGE_VERSION" >> $GITHUB_OUTPUT
-        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$SERVICE_NAME-$ECR_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "GHCR_IMAGE_URI=ghcr.io/$GHCR_IMAGE_NAME:$PROCESS_NAME.$GHCR_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$PROCESS_NAME.$ECR_IMAGE_VERSION" >> $GITHUB_OUTPUT

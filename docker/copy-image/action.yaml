@@ -1,8 +1,8 @@
 name: "Docker Copy and Push"
 description: "Copies an image from ghcr and pushes it to ecr"
 inputs:
-  service_name:
-    description: "[string] Push the docker image?"
+  process_name:
+    description: "[string] Process name"
     required: true
   environment:
     description: "[string] Environment to push to (default, stage, prod)"
@@ -32,7 +32,7 @@ runs:
   steps:
     - name: Validate Inputs
       env:
-        SERVICE_NAME: ${{ inputs.service_name }}
+        process_name: ${{ inputs.process_name }}
         ENVIRONMENT: ${{ inputs.environment }}
         ECR_IMAGE_VERSION: ${{ inputs.ecr_image_version }}
         GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
@@ -42,7 +42,7 @@ runs:
         source ../../shell-scripts/input-validator.sh
 
         declare -A inputs
-        inputs[service_name]="$SERVICE_NAME"
+        inputs[process_name]="$process_name"
         inputs[environment]="$ENVIRONMENT"
         inputs[ecr_image_version]="$ECR_IMAGE_VERSION"
         inputs[ghcr_image_version]="$GHCR_IMAGE_VERSION"
@@ -55,7 +55,6 @@ runs:
       shell: bash
       id: image-name
       env:
-        service_name: ${{ inputs.service_name }}
         repo: ${{ github.repository }}
         environment: ${{ inputs.environment }}
         workspace: ${{ inputs.workspace }}
@@ -79,16 +78,16 @@ runs:
       id: image-uri
       shell: bash
       env:
-        SERVICE_NAME: ${{ inputs.service_name }}
+        process_name: ${{ inputs.process_name }}
         ECR_IMAGE_VERSION: ${{ inputs.ecr_image_version }}
         GHCR_IMAGE_VERSION: ${{ inputs.ghcr_image_version }}
         ACCOUNT_ID: ${{ inputs.aws_account_id }}
       run: |
         ECR_TRIMMED_IMAGE_VERSION=$(echo $ECR_IMAGE_VERSION | tr / -)
         GHCR_TRIMMED_IMAGE_VERSION=$(echo $GHCR_IMAGE_VERSION | tr / -)
-        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$SERVICE_NAME-$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_ENV
-        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$SERVICE_NAME-$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
-        echo "GHCR_IMAGE_URI=ghcr.io/$GHCR_IMAGE_NAME:$SERVICE_NAME-$GHCR_TRIMMED_IMAGE_VERSION" >> $GITHUB_ENV
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$process_name.$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_ENV
+        echo "ECR_IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$process_name.$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
+        echo "GHCR_IMAGE_URI=ghcr.io/$GHCR_IMAGE_NAME:$process_name.$GHCR_TRIMMED_IMAGE_VERSION" >> $GITHUB_ENV
 
     - name: Log into registry ${{ env.REGISTRY }}
       uses: docker/login-action@v2
