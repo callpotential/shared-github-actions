@@ -18,7 +18,7 @@ outputs:
     description: "[jsonArray(string)] Json array of process names"
     value: ${{ steps.get-process-info.outputs.process_names }}
   process_details:
-    description: "[jsonArray({})] Json array of objects containing: process_name, service_name, docker_dir, src_dir"
+    description: "[jsonArray({})] Json array of objects containing: service_process_name, process_name, service_name, docker_dir, src_dir"
     value: ${{ steps.get-process-info.outputs.process_details }}
 
 runs:
