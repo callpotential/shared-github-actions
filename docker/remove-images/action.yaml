@@ -25,7 +25,7 @@ runs:
       name: Get pacakge id
       shell: bash
       env:
-        package_version: "${{ inputs.process_name }}-${{ inputs.ghcr_image_version }}"
+        package_version: "${{ inputs.process_name }}.${{ inputs.ghcr_image_version }}"
         package_name: "${{ github.event.repository.name }}%2F${{ inputs.environment }}"
         package_type: "container"
         org: ${{ github.repository_owner }}
