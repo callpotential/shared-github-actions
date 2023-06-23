@@ -75,7 +75,7 @@ runs:
       id: plan-run
       # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
       # we want to capture the error instead.
-      shell: '/bin/bash'
+      shell: bash
       working-directory: ./infrastructure
       run: |
         # a lot going on here.  copy the stdout file handle to fd5.
