@@ -115,7 +115,7 @@ runs:
         echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
         echo "${CHANGE_SUMMARY}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-        
+
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
     - name: Update PR
@@ -124,8 +124,8 @@ runs:
       with:
         github-token: ${{ env.GITHUB_TOKEN }}
         script: |
-          const fs = require("fs");
-          # const buffer = fs.readFileSync("./infrastructure/change.json");
+          // const fs = require("fs");
+          // const buffer = fs.readFileSync("./infrastructure/change.json");
           // console.log(buffer.toString());
           // var obj = JSON.parse(buffer.toString());
           // 1. Retrieve existing bot comments for the PR
