@@ -111,7 +111,7 @@ runs:
       with:
         github-token: ${{ env.GITHUB_TOKEN }}
         script: |
-          var exec = require('child_process').exec;
+          var exec = require('child_process').execSync;
           const tfplan = await exec('cd ./infrastructure && terraform show tfplan')
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
@@ -129,7 +129,7 @@ runs:
 
           <details><summary>Plan Results</summary>
           \`\`\`
-          ${tfplan.stdout.trim()}
+          ${tfplan.toString()}
           \`\`\`
           </details>
           `;
