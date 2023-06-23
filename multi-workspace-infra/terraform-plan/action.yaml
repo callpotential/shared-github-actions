@@ -101,16 +101,15 @@ runs:
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
 
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan | sed -r 's/%0A/\n/g')
-        echo $JSON_OUTPUT
-        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
+        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         # HUMAN_OUTPUT=$(terraform show tfplan)
 
         echo "Parsed Summary: $CHANGE_SUMMARY"
 
         echo "test"
-        terraform show -json tfplan | tf-summarize
-
+        terraform show -json tfplan
+        tf-summarize tfplan
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
