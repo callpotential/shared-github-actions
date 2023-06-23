@@ -84,8 +84,6 @@ runs:
         echo $PWD >> $GITHUB_PATH
     - name: TF Plan
       id: plan-run
-      # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
-      # we want to capture the error instead.
       shell: bash
       working-directory: ./infrastructure
       run: |
@@ -103,14 +101,15 @@ runs:
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
 
-        # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan | sed -r 's/%0A/\n/g')
         echo $JSON_OUTPUT
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         # HUMAN_OUTPUT=$(terraform show tfplan)
-        terraform show -json tfplan 
-        terraform show -json tfplan | tf-summarize -md
+
         echo "Parsed Summary: $CHANGE_SUMMARY"
+
+        echo "test"
+        terraform show -json tfplan | tf-summarize
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
