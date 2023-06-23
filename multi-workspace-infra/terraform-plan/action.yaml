@@ -102,10 +102,9 @@ runs:
         terraform workspace show
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
-        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's|[\" ]||g')
+        echo JSON_OUTPUT | sed -r 's/%0A/\n/g'  | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary")' > change.json
+        # CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's|[\"]||g')
         # HUMAN_OUTPUT=$(terraform show tfplan)
-
-        echo "Parsed Summary: $CHANGE_SUMMARY"
 
         # terraform show -json tfplan > output.json
         # echo $(cat ./output.json)
@@ -113,7 +112,7 @@ runs:
         # echo $(cat ./plan-summary.md)
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
-        echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
+        # echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
     - name: Update PR
       uses: actions/github-script@v6
@@ -122,7 +121,8 @@ runs:
         github-token: ${{ env.GITHUB_TOKEN }}
         script: |
           const fs = require("fs");
-          const buffer = fs.readFileSync("./infrastructure/plan-summary.md");
+          const buffer = fs.readFileSync("./infrastructure/change.json");
+          var obj = JSON.parse(buffer);
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
@@ -135,7 +135,7 @@ runs:
           const output = `
           #### Terraform Plan Output
           [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
+          <span style="color:green">${obj["@message"]}</span>
 
           <details><summary>WIP Plan Results</summary>
           WIP ::: Should come from buffer.toString()
