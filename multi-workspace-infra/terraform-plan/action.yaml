@@ -75,7 +75,8 @@ runs:
       id: plan-run
       # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
       # we want to capture the error instead.
-      shell: '/bin/bash {0}'
+      shell: '/bin/bash'
+      working-directory: ./infrastructure
       run: |
         # a lot going on here.  copy the stdout file handle to fd5.
         exec 5>&1
@@ -94,20 +95,13 @@ runs:
 
 
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
-        # store the exit code here
-        EXITCODE=$?
-
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         HUMAN_OUTPUT=$(terraform show tfplan)
 
         echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
-
-        # set exit code for pickup later, and make sure we exit with same code, MIGHT NOT BE NECESSARY???
-        echo "::set-output name=exit::${EXITCODE}"
-        exit $EXITCODE
     - name: Update PR
       uses: actions/github-script@v6
       id: plan-comment
