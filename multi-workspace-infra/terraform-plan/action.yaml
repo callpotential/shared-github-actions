@@ -1,36 +1,36 @@
-name: 'Terraform Plan - Multiple Workspaces'
-description: 'Runs a terraform plan for a for a repo with a multiple workspaces (i.e. most terminus repos).'
+name: "Terraform Plan - Multiple Workspaces"
+description: "Runs a terraform plan for a for a repo with a multiple workspaces (i.e. most terminus repos)."
 inputs:
   ssh_key:
-    description: '[secret] GitHub SSH Key for pulling repo.'
+    description: "[secret] GitHub SSH Key for pulling repo."
     required: true
   terraform_version:
-    description: '[decimal] (i.e. 1.0.11) Terraform version to use.'
+    description: "[decimal] (i.e. 1.0.11) Terraform version to use."
     required: true
   terraform_workspace:
-    description: '[string] (i.e. ninja/prod-east) TF Workspace.'
+    description: "[string] (i.e. ninja/prod-east) TF Workspace."
     default: "default"
     required: false
   enable_plan_commenter:
-    description: '[bool] (i.e. true/false) Enable the tf plan commenter.'
+    description: "[bool] (i.e. true/false) Enable the tf plan commenter."
     required: false
-    default: 'true'
+    default: "true"
   checkout_ref:
-    description: 'A checkout-able object. Blank defaults to the Action default behavior'
+    description: "A checkout-able object. Blank defaults to the Action default behavior"
     required: false
-    default: ''
+    default: ""
   pre_apply_target:
-    description: '[string][advanced][do not use] A targeted resource to have terraform `apply` prior to planning.  USE WITH CAUTION.'
+    description: "[string][advanced][do not use] A targeted resource to have terraform `apply` prior to planning.  USE WITH CAUTION."
     required: false
-    default: ''
+    default: ""
   use_beta_commenter:
-    description: '[bool] Whether to use the beta version of the PR commenter (see the v2-beta tag on its repo).'
+    description: "[bool] Whether to use the beta version of the PR commenter (see the v2-beta tag on its repo)."
     required: false
-    default: 'false'
+    default: "false"
   enable_tflint:
-    description: '[bool] (i.e. true/false) Whether or not to enable and run tflint.'
+    description: "[bool] (i.e. true/false) Whether or not to enable and run tflint."
     required: false
-    default: 'true'
+    default: "true"
 
 runs:
   using: "composite"
@@ -100,6 +100,8 @@ runs:
         # HUMAN_OUTPUT=$(terraform show tfplan)
         terraform show tfplan
 
+        echo "Parsed Summary: $CHANGE_SUMMARY"
+
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
@@ -120,16 +122,17 @@ runs:
           const botComment = comments.find(comment => {
             return comment.user.type === 'Bot' && comment.body.includes('Terraform Plan Output')
           });
-          const output = `#### Terraform Plan Output
-              <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
+          const output = `
+          #### Terraform Plan Output
+          <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
 
 
-              <details><summary>Plan Results</summary>
-              \`\`\`
-              ${tfplan.stdout}
-              \`\`\`
-              </details>
-              `;
+          <details><summary>Plan Results</summary>
+          \`\`\`
+          ${tfplan.stdout.trim()}
+          \`\`\`
+          </details>
+          `;
           // 3. Delete previous comment so PR timeline makes sense
           if (botComment) {
             github.rest.issues.deleteComment({
