@@ -71,17 +71,17 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
-    - name: Install terraform-plan-summary
-      shell: bash
-      run: |
-        REPO="dineshba/terraform-plan-summary"
-        curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
-        tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
-        mv tf-summarize_linux_amd64.zip $tmpDir
-        cd $tmpDir
-        unzip tf-summarize_linux_amd64.zip
-        chmod +x tf-summarize
-        echo $PWD >> $GITHUB_PATH
+    # - name: Install terraform-plan-summary
+      # shell: bash
+      # run: |
+      #   REPO="dineshba/terraform-plan-summary"
+      #   curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
+      #   tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
+      #   mv tf-summarize_linux_amd64.zip $tmpDir
+      #   cd $tmpDir
+      #   unzip tf-summarize_linux_amd64.zip
+      #   chmod +x tf-summarize
+      #   echo $PWD >> $GITHUB_PATH
     - name: TF Plan
       id: plan-run
       shell: bash
@@ -107,10 +107,10 @@ runs:
 
         echo "Parsed Summary: $CHANGE_SUMMARY"
 
-        terraform show -json tfplan > output.json
-        echo $(cat ./output.json)
-        tf-summarize -out=plan-summary.md output.json    
-        echo $(cat ./plan-summary.md)
+        # terraform show -json tfplan > output.json
+        # echo $(cat ./output.json)
+        # tf-summarize -out=plan-summary.md output.json    
+        # echo $(cat ./plan-summary.md)
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
@@ -137,8 +137,8 @@ runs:
           [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
 
-          <details><summary>Plan Results</summary>
-          ${buffer.toString()}
+          <details><summary>WIP Plan Results</summary>
+          WIP ::: Should come from buffer.toString()
           </details>
           `;
           // 3. Delete previous comment so PR timeline makes sense
