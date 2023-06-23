@@ -112,7 +112,7 @@ runs:
         # echo $(cat ./plan-summary.md)
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
-        echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
+        echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_ENV
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
     - name: Update PR
       uses: actions/github-script@v6
@@ -135,7 +135,7 @@ runs:
           });
           const output = `
           #### Terraform Plan Output
-          <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
+          <span style="color:green">${{ env.CHANGE_SUMMARY }}</span>
           [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
           <details><summary>WIP Plan Results</summary>
