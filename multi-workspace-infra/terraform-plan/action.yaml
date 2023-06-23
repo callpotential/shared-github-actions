@@ -106,6 +106,7 @@ runs:
         # CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's|[\"]||g')
         # HUMAN_OUTPUT=$(terraform show tfplan)
 
+        cat change.json
         # terraform show -json tfplan > output.json
         # echo $(cat ./output.json)
         # tf-summarize -out=plan-summary.md output.json    
