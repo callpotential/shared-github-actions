@@ -123,8 +123,8 @@ runs:
         script: |
           const fs = require("fs");
           const buffer = fs.readFileSync("./infrastructure/change.json");
-          console.log(buffer.toString());
-          var obj = JSON.parse(buffer.toString());
+          # console.log(buffer.toString());
+          # var obj = JSON.parse(buffer.toString());
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
@@ -137,7 +137,7 @@ runs:
           const output = `
           #### Terraform Plan Output
           [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          <span style="color:green">${obj["@message"]}</span>
+          <span style="color:green">${buffer.toString()}</span>
 
           <details><summary>WIP Plan Results</summary>
           WIP ::: Should come from buffer.toString()
