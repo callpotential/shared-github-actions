@@ -98,8 +98,9 @@ runs:
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         HUMAN_OUTPUT=$(terraform show tfplan)
+        terraform show tfplan
 
-        echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
+        # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
     - name: Update PR
