@@ -123,7 +123,8 @@ runs:
         script: |
           const fs = require("fs");
           const buffer = fs.readFileSync("./infrastructure/change.json");
-          var obj = JSON.parse(buffer);
+          console.log(buffer.toString());
+          var obj = JSON.parse(buffer.toString());
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
