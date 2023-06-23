@@ -92,13 +92,14 @@ runs:
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
 
-        
+
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
-        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
-        HUMAN_OUTPUT-$(terraform show tfplan)
         # store the exit code here
         EXITCODE=$?
+
+        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
+        HUMAN_OUTPUT=$(terraform show tfplan)
 
         echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
