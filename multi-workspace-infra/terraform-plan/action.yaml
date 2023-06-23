@@ -18,13 +18,6 @@ inputs:
     description: '[bool] (i.e. true/false) Enable the tf plan commenter.'
     required: false
     default: 'true'
-  tf_create_workspace:
-    description: '[bool] (i.e. true/false) If set to true, workspace will be
-                  created based on terraform_workspace input variable. This should only be run when
-                  creating the repo and running the plan for the first time and
-                  removed after.'
-    required: false
-    default: 'false'
   checkout_ref:
     description: 'A checkout-able object. Blank defaults to the Action default behavior'
     required: false
@@ -45,10 +38,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set Shared Actions Root Directory
-      run: |
-        echo "ROOT_DIRECTORY=$(find /home/runner/work/_actions/GetTerminus/terminus-github-actions/ -mindepth 1 -maxdepth 1 -type d)" >> $GITHUB_ENV
-      shell: bash
     - name: Validate Inputs
       env:
         SSH_KEY: ${{ inputs.ssh_key }}
@@ -87,55 +76,22 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
-    - name: Terraform Format Check
-      id: fmt
-      run: |
-        terraform fmt -check -recursive || echo "::set-output name=exitcode_continue_on_error::$?"
-      #TODO: Uncomment once github supports it
-      #continue-on-error: true
-      shell: bash
-    - name: Post TF Format Check
-      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
-      uses: GetTerminus/terraform-pr-commenter@v2
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-        EXPAND_SUMMARY_DETAILS: "false"
-      with:
-        commenter_type: fmt
-        commenter_input: ${{ format('{0}{1}', steps.fmt.outputs.stdout, steps.fmt.outputs.stderr) }}
-        commenter_exitcode: ${{ steps.fmt.outputs.exitcode }}
-        terraform_version: ${{ inputs.terraform_version }}
-        use_beta_version: ${{ inputs.use_beta_commenter }}
     - name: TF Plan - Initialize
       id: init
       run: |
         terraform version
         terraform init -lock=false -input=false
       shell: bash
-    - name: Post TF Init Comment
-      # TODO: Add in the below code to all plan commenter if statements when github adds in the functionality
-      # (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
-      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
-      uses: GetTerminus/terraform-pr-commenter@v2
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-        EXPAND_SUMMARY_DETAILS: "false"
-      with:
-        commenter_type: init
-        commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
-        commenter_exitcode: ${{ steps.init.outputs.exitcode }}
-        terraform_version: ${{ inputs.terraform_version }}
-        use_beta_version: ${{ inputs.use_beta_commenter }}
     - name: TF Plan - Select Workspace
-      if: ${{ inputs.tf_create_workspace != 'true' }}
+      id: workspace
       run: |
-        terraform workspace select ${{ inputs.terraform_workspace }}
-      shell: bash
-    - name: TF Plan - Create Workspace
-      if: ${{ inputs.tf_create_workspace == 'true' }}
-      run: |
-        terraform workspace new ${{ inputs.terraform_workspace }}
-        terraform workspace select ${{ inputs.terraform_workspace }}
+        if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
+          shared_workspace=${{ inputs.terraform_workspace }}
+        else
+          shared_workspace=default
+        fi
+        terraform workspace select $shared_workspace
+        echo "WORKSPACE=$shared_workspace" >> $GITHUB_OUTPUT
       shell: bash
     - name: TF Plan - Validate
       id: validate
@@ -143,119 +99,8 @@ runs:
         terraform validate
         terraform workspace show
       shell: bash
-    - name: Post TF Validate Comment
-      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
-      uses: GetTerminus/terraform-pr-commenter@v2
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-        EXPAND_SUMMARY_DETAILS: "false"
-      with:
-        commenter_type: validate
-        commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
-        commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
-        terraform_version: ${{ inputs.terraform_version }}
-        use_beta_version: ${{ inputs.use_beta_commenter }}
-    - name: TF Plan - Targeted pre-apply
-      if: ${{ inputs.pre_apply_target != '' }}
-      # please don't use this.
-      id: pre-apply
-      run: |
-        terraform apply -target=${{ inputs.pre_apply_target }} -var-file=vars/${{ inputs.terraform_workspace }}.tfvars -input=false -auto-approve
-      shell: bash
-    - name: TF Lint - Config Hash
-      if: ${{ inputs.enable_tflint == 'true' }}
-      run: |
-        TFLINT_HASH_ARRAY=($(sha256sum $ROOT_DIRECTORY/tflint/.tflint.hcl))
-        echo "TFLINT_HASH=$TFLINT_HASH_ARRAY" >> $GITHUB_ENV
-      shell: bash
-    - name: TF Lint - Cache plugin dir
-      if: ${{ inputs.enable_tflint == 'true' }}
-      uses: actions/cache@v3
-      with:
-        path: ~/.tflint.d/plugins
-        key: ubuntu-latest-tflint-${{ env.TFLINT_HASH }}
-    - uses: terraform-linters/tflint-load-config-action@v0
-      if: ${{ inputs.enable_tflint == 'true' }}
-      with:
-        token: ${{ inputs.github_token }}
-        source-repo: callpotential/shared-github-actions
-        source-path: tflint/.tflint.hcl
-    - name: TFLint - Setup
-      if: ${{ inputs.enable_tflint == 'true' }}
-      uses: terraform-linters/setup-tflint@v3
-      with:
-        tflint_version: latest
-    - name: TFLint - Show Version
-      if: ${{ inputs.enable_tflint == 'true' }}
-      run: tflint --version
-      shell: bash
-    - name: TFLint - Init
-      if: ${{ inputs.enable_tflint == 'true' }}
-      run: tflint --init
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-      shell: bash
-    - name: TFLint - Run and Store Output
-      if: ${{ inputs.enable_tflint == 'true' }}
-      run: |
-        # Copy the stdout file handle to fd5.
-        exec 5>&1
-
-        # Set var files
-        VAR_FILES=$(printf -- '--var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars)
-
-        # Merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from tflint
-        OUTPUT=$(tflint $VAR_FILES 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
-
-        echo "TF_LINT_EXIT_CODE=$?" >> $GITHUB_ENV
-
-        # Set output to env variable
-        EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-        echo "TF_LINT_OUTPUT<<$EOF" >> $GITHUB_ENV
-        echo "$OUTPUT" >> $GITHUB_ENV
-        echo "$EOF" >> $GITHUB_ENV
-      shell: '/bin/bash {0}'
-    - name: TFLint - Add TFLint Output to PR in Comment if Issues are Found
-      if: ${{ env.TF_LINT_EXIT_CODE != '0' && inputs.enable_tflint == 'true' }}
-      uses: thollander/actions-comment-pull-request@v2
-      with:
-        mode: recreate
-        comment_tag: tflint_${{ inputs.terraform_workspace }}
-        message: |
-          ## TFLint Found Issues in `${{ inputs.terraform_workspace }}`
-          <details>
-            <summary>Show Output</summary>
-
-
-            ${{ env.TF_LINT_OUTPUT }}
-
-
-          </details>
-    - name: TFLint - Delete Comments if No Issues are Found
-      if: ${{ env.TF_LINT_EXIT_CODE == '0' && inputs.enable_tflint == 'true' }}
-      env:
-        GITHUB_EVENT: ${{ toJSON(github.event) }}
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-      run: |
-        AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
-        ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
-        PR_COMMENTS_URL=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.comments_url")
-        PR_COMMENT_URI=$(echo "$GITHUB_EVENT" | jq -r ".repository.issue_comment_url" | sed "s|{/number}||g")
-        comment_ids=()
-        readarray -t -O "${#comment_ids[@]}" comment_ids < <(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[]|select(.body | contains("tflint_${{ inputs.terraform_workspace }}")) | .id')
-        for PR_COMMENT_ID in "${comment_ids[@]}"
-        do
-          FOUND=true
-          echo "Deleting PR Comment: $PR_COMMENT_ID."
-          PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-          STATUS=$(curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -o /dev/null -w "%{http_code}" -L "$PR_COMMENT_URL")
-          if [ "$STATUS" != "204"  ]; then
-            echo "Failed to delete:  status $STATUS (most likely rate limited)"
-          fi
-        done
-      shell: bash
     - name: TF Plan - Run
-      id: plan
+      id: plan-run
       # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
       # we want to capture the error instead.
       shell: '/bin/bash {0}'
@@ -264,31 +109,55 @@ runs:
         exec 5>&1
 
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
-        OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/${{ inputs.terraform_workspace }}*.tfvars) -lock=false -input=false -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
-
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.workspace.outputs.WORKSPACE }}.tfvars) -lock=false -input=false -json -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
+        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
+        HUMAN_OUTPUT-$(terraform show tfplan)
         # store the exit code here
         EXITCODE=$?
 
-        # github actions doesn't allow us to set a multiline output so we cat it to the environment
-        echo "PLAN_OUTPUT<<EOF" >> $GITHUB_ENV
-        echo "${OUTPUT::65000}" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
+        echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
+        echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
 
-        # set exit code for pickup later, and make sure we exit with same code
+        # set exit code for pickup later, and make sure we exit with same code, MIGHT NOT BE NECESSARY???
         echo "::set-output name=exit::${EXITCODE}"
         exit $EXITCODE
-    - name: Post TF Plan Comment
-      if: ${{ always() && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && inputs.enable_plan_commenter == 'true' }}
-      uses: GetTerminus/terraform-pr-commenter@v2
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-        EXPAND_SUMMARY_DETAILS: "false"
-        TF_WORKSPACE: ${{ inputs.terraform_workspace }}
-        COMMENTER_DEBUG: "true"
+    - name: Update PR
+      uses: actions/github-script@v6
+      id: plan-comment
       with:
-        commenter_type: plan
-        commenter_input: ${{ env.PLAN_OUTPUT }}
-        commenter_plan_path: tfplan
-        commenter_exitcode: ${{ steps.plan.outputs.exit }}
-        terraform_version: ${{ inputs.terraform_version }}
-        use_beta_version: ${{ inputs.use_beta_commenter }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          // 1. Retrieve existing bot comments for the PR
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const botComment = comments.find(comment => {
+            return comment.user.type === 'Bot' && comment.body.includes('Terraform Plan Output')
+          });
+          const output = `#### Terraform Plan Output
+              <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
+
+
+              <details><summary>Plan Results</summary>
+              \`\`\`
+              ${{ steps.plan-run.outputs.HUMAN_OUTPUT }}
+              \`\`\`
+              </details>
+              `;
+          // 3. Delete previous comment so PR timeline makes sense
+          if (botComment) {
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+            });
+          }
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          });
