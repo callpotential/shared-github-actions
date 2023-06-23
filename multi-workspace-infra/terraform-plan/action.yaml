@@ -106,10 +106,9 @@ runs:
         # HUMAN_OUTPUT=$(terraform show tfplan)
 
         echo "Parsed Summary: $CHANGE_SUMMARY"
+        tf-summarize -out=plan-summary.md tfplan
 
-        echo "test"
-        terraform show -json tfplan
-        tf-summarize tfplan
+        echo $(cat ./plan-summary.md)
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         echo "CHANGE_SUMMARY=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
