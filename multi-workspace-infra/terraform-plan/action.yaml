@@ -71,30 +71,7 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
-    - name: TF Plan - Initialize
-      id: init
-      run: |
-        terraform version
-        terraform init -lock=false -input=false
-      shell: bash
-    - name: TF Plan - Select Workspace
-      id: workspace
-      run: |
-        if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
-          shared_workspace=${{ inputs.terraform_workspace }}
-        else
-          shared_workspace=default
-        fi
-        terraform workspace select $shared_workspace
-        echo "WORKSPACE=$shared_workspace" >> $GITHUB_OUTPUT
-      shell: bash
-    - name: TF Plan - Validate
-      id: validate
-      run: |
-        terraform validate
-        terraform workspace show
-      shell: bash
-    - name: TF Plan - Run
+    - name: TF Plan
       id: plan-run
       # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
       # we want to capture the error instead.
@@ -103,8 +80,21 @@ runs:
         # a lot going on here.  copy the stdout file handle to fd5.
         exec 5>&1
 
+        if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
+          shared_workspace=${{ inputs.terraform_workspace }}
+        else
+          shared_workspace=default
+        fi
+
+        terraform version
+        terraform init -lock=false -input=false
+        terraform validate
+        terraform workspace select ${{ inputs.terraform_workspace }}
+        terraform workspace show
+
+        
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.workspace.outputs.WORKSPACE }}.tfvars) -lock=false -input=false -json -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan 2>&1 | tee /dev/fd/5; exit ${PIPESTATUS[0]})
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         HUMAN_OUTPUT-$(terraform show tfplan)
         # store the exit code here
