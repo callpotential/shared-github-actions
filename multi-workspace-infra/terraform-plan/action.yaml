@@ -107,10 +107,11 @@ runs:
 
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
+        echo $JSON_OUTPUT
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         # HUMAN_OUTPUT=$(terraform show tfplan)
-        terraform show tfplan
-
+        # terraform show tfplan
+        terraform show -json tfplan | tf-summarize -md > plan-summary.md
         echo "Parsed Summary: $CHANGE_SUMMARY"
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
@@ -122,8 +123,8 @@ runs:
       with:
         github-token: ${{ env.GITHUB_TOKEN }}
         script: |
-          var exec = require('child_process').execSync;
-          const tfplan = await exec('cd ./infrastructure &&  terraform show -json tfplan | tf-summarize')
+          const fs = require("fs");
+          const buffer = fs.readFileSync("./infrastructure/plan-summary.md");
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
@@ -135,13 +136,11 @@ runs:
           });
           const output = `
           #### Terraform Plan Output
+          [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           <span style="color:green">${{ steps.plan-run.outputs.CHANGE_SUMMARY }}</span>
 
-
           <details><summary>Plan Results</summary>
-          \`\`\`
-          ${tfplan.toString()}
-          \`\`\`
+          ${buffer.toString()}
           </details>
           `;
           // 3. Delete previous comment so PR timeline makes sense
