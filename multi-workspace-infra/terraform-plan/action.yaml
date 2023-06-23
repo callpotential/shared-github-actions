@@ -89,9 +89,6 @@ runs:
       shell: bash
       working-directory: ./infrastructure
       run: |
-        # a lot going on here.  copy the stdout file handle to fd5.
-        exec 5>&1
-
         if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
           shared_workspace=${{ inputs.terraform_workspace }}
         else
@@ -107,7 +104,7 @@ runs:
 
         # merge stderr into stdout and print it to fd5 (parent shell's stdout); exit with the code from terraform plan
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
-        echo $JSON_OUTPUT
+        echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s .
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]')
         # HUMAN_OUTPUT=$(terraform show tfplan)
         # terraform show tfplan
