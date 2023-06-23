@@ -71,6 +71,17 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
+    - name: Install terraform-plan-summary
+      shell: bash
+      run: |
+        REPO="dineshba/terraform-plan-summary"
+        curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
+        tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
+        mv tf-summarize_linux_amd64.zip $tmpDir
+        cd $tmpDir
+        unzip tf-summarize_linux_amd64.zip
+        chmod +x tf-summarize
+        echo $PWD >> $GITHUB_PATH
     - name: TF Plan
       id: plan-run
       # have to use /bin/bash because GHA runs by default with `set -e` to end execution on any error.
@@ -112,7 +123,7 @@ runs:
         github-token: ${{ env.GITHUB_TOKEN }}
         script: |
           var exec = require('child_process').execSync;
-          const tfplan = await exec('cd ./infrastructure && terraform show tfplan')
+          const tfplan = await exec('cd ./infrastructure &&  terraform show -json tfplan | tf-summarize')
           // 1. Retrieve existing bot comments for the PR
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
