@@ -71,7 +71,7 @@ runs:
       with:
         aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: us-west-2
     - name: HashiCorp - Setup Terraform
       uses: hashicorp/setup-terraform@v1.2.1
       with:
