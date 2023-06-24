@@ -102,7 +102,7 @@ runs:
         terraform workspace show
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
-        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
+        CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | head -1 | sed 's/|[\"]|//g')
         # HUMAN_OUTPUT=$(terraform show tfplan)
 
         # terraform show -json tfplan > output.json
@@ -111,9 +111,7 @@ runs:
         # echo $(cat ./plan-summary.md)
 
 
-        echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
-        echo "${CHANGE_SUMMARY}" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        echo "CHANGE_SUMMARY=$CHANGE_SUMMARY >> $GITHUB_ENV
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
