@@ -103,7 +103,7 @@ runs:
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
-        # HUMAN_OUTPUT=$(terraform show tfplan)
+        HUMAN_OUTPUT=$(terraform show tfplan)
 
         # terraform show -json tfplan > output.json
         # echo $(cat ./output.json)
@@ -113,6 +113,10 @@ runs:
 
         echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
         echo "$CHANGE_SUMMARY" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+        echo "HUMAN_OUTPUT<<EOF" >> $GITHUB_ENV
+        echo "$HUMAN_OUTPUT" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
@@ -136,13 +140,15 @@ runs:
           const botComment = comments.find(comment => {
             return comment.user.type === 'Bot' && comment.body.includes('Terraform Plan Output')
           });
+          var plan = ${{ env.CHANGE_SUMMARY }}
+          plan = plan.replaceAll('"', '');
           const output = `
-          #### Terraform Plan Output
-          <span style="color:green">${{ env.CHANGE_SUMMARY }}</span>
-          [Job Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          #### Terraform Plan for ${{ github.event.pull_request.head.ref }} -> ${{ github.event.pull_request.base.ref }}
+          <span style="color:green">${plan}</span>
+          [Pull Request Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-          <details><summary>WIP Plan Results</summary>
-          WIP ::: Should come from buffer.toString()
+          <details><summary>Plan Results</summary>
+          ${{ env.HUMAN_OUTPUT }}
           </details>
           `;
           // 3. Delete previous comment so PR timeline makes sense
