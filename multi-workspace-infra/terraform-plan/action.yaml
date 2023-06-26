@@ -120,8 +120,23 @@ runs:
         echo "${HUMAN_OUTPUT::65000}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
-        # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
+        # echo "shared_workspace=$shared_workspace" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
+
+
+    - name: Terraform Plan - ${{ inputs.terraform_workspace }}
+      id: plan
+      shell: bash
+      run: terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.plan-run.shared_workspace }}*.tfvars) -lock=false -out=tfplan
+
+    - name: Post Plan - ${{ matrix['workspace'] }}
+      uses: robburger/terraform-pr-commenter@v1
+      env:
+        TF_WORKSPACE: ${{ inputs.terraform_workspace }}
+      with:
+        commenter_type: plan
+        commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
+        commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
 
     - name: Update PR
       uses: actions/github-script@v6
