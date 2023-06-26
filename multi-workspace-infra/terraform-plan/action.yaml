@@ -114,7 +114,7 @@ runs:
         echo "EOF" >> $GITHUB_ENV
 
         echo "HUMAN_OUTPUT<<EOF" >> $GITHUB_ENV
-        echo "$HUMAN_OUTPUT" >> $GITHUB_ENV
+        echo "$SUM" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
