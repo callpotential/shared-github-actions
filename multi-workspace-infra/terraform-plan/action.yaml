@@ -103,20 +103,20 @@ runs:
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
-        # HUMAN_OUTPUT=$(terraform show tfplan)
-        # echo "$HUMAN_OUTPUT"
-
-        $plan=$(terraform show -json tfplan)
-        echo "$plan"
-        SUM=$(echo "$plan" | tf-summarize -md)
-        echo "$SUM"
+        HUMAN_OUTPUT=$(terraform show tfplan)
+        
+        terraform show -json tfplan
+        # $plan=$(terraform show -json tfplan)
+        # echo "$plan"
+        # SUM=$(echo "$plan" | tf-summarize -md)
+        # echo "$SUM"
 
         echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
         echo "$CHANGE_SUMMARY" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
         echo "HUMAN_OUTPUT<<EOF" >> $GITHUB_ENV
-        echo "$SUM" >> $GITHUB_ENV
+        echo "${HUMAN_OUTPUT::65000}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
         # echo "JSON_OUTPUT=$JSON_OUTPUT" >> $GITHUB_OUTPUT
@@ -148,7 +148,7 @@ runs:
           [Pull Request Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
           <details><summary>Plan Results</summary>
-          ${{ env.CHANGE_SUMMARY }}
+          ${{ env.HUMAN_OUTPUT }}
           </details>
           `;
           // 3. Delete previous comment so PR timeline makes sense
