@@ -106,7 +106,9 @@ runs:
         # HUMAN_OUTPUT=$(terraform show tfplan)
         # echo "$HUMAN_OUTPUT"
 
-        SUM=$(terraform show -json tfplan | tf-summarize -md)
+        $plan=$(terraform show -json tfplan)
+        echo "$plan"
+        SUM=$(echo "$plan" | tf-summarize -md)
         echo "$SUM"
 
         echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
