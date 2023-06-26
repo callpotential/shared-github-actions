@@ -148,9 +148,9 @@ runs:
           [Pull Request Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
           <details><summary>Plan Results</summary>
-          ```
+          \`\`\`
           ${{ env.HUMAN_OUTPUT }}
-          ```
+          \`\`\`
           </details>
           `;
           // 3. Delete previous comment so PR timeline makes sense
