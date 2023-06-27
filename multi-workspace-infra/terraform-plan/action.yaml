@@ -71,17 +71,17 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
-    - name: Install terraform-plan-summary
-      shell: bash
-      run: |
-        REPO="dineshba/terraform-plan-summary"
-        curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
-        tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
-        mv tf-summarize_linux_amd64.zip $tmpDir
-        cd $tmpDir
-        unzip tf-summarize_linux_amd64.zip
-        chmod +x tf-summarize
-        echo $PWD >> $GITHUB_PATH
+    # - name: Install terraform-plan-summary
+    #   shell: bash
+    #   run: |
+    #     REPO="dineshba/terraform-plan-summary"
+    #     curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
+    #     tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
+    #     mv tf-summarize_linux_amd64.zip $tmpDir
+    #     cd $tmpDir
+    #     unzip tf-summarize_linux_amd64.zip
+    #     chmod +x tf-summarize
+    #     echo $PWD >> $GITHUB_PATH
     - name: TF Plan
       id: plan-run
       shell: bash
@@ -103,10 +103,8 @@ runs:
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
-        HUMAN_OUTPUT=$(terraform show -no-color tfplan)
-        tf-summarize -v
-        terraform show -json tfplan > output.json
-        tf-summarize output.json || echo "tf-summarize failed"
+        HUMAN_OUTPUT=$(terraform show -no-color tfplan | head -1 | sed '$d')
+
         # $plan=$(terraform show -json tfplan)
         # echo "$plan"
         # SUM=$(echo "$plan" | tf-summarize -md)
@@ -122,21 +120,6 @@ runs:
 
         # echo "shared_workspace=$shared_workspace" >> $GITHUB_OUTPUT
         # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
-
-
-    - name: Terraform Plan - ${{ inputs.terraform_workspace }}
-      id: plan
-      shell: bash
-      run: cd ./infrastructure && terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.plan-run.outputs.shared_workspace }}*.tfvars) -lock=false -out=tfplan
-
-    - name: Post Plan - ${{ matrix['workspace'] }}
-      uses: robburger/terraform-pr-commenter@v1
-      env:
-        TF_WORKSPACE: ${{ inputs.terraform_workspace }}
-      with:
-        commenter_type: plan
-        commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
-        commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
 
     - name: Update PR
       uses: actions/github-script@v6
@@ -162,7 +145,9 @@ runs:
 
           <details><summary>Plan Results</summary>
           \`\`\`
+
           ${{ env.HUMAN_OUTPUT }}
+
           \`\`\`
           </details>
           `;
