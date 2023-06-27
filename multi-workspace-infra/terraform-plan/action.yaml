@@ -134,7 +134,7 @@ runs:
             issue_number: context.issue.number,
           });
           const botComment = comments.find(comment => {
-            return comment.user.type === 'Bot' && comment.body.includes('Terraform Plan Output')
+            return comment.user.type === 'Bot' && comment.body.includes('Terraform Plan for')
           });
           var plan = ${{ env.CHANGE_SUMMARY }}
           plan = plan.replaceAll('"', '');
