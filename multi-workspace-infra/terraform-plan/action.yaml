@@ -127,7 +127,7 @@ runs:
     - name: Terraform Plan - ${{ inputs.terraform_workspace }}
       id: plan
       shell: bash
-      run: terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.plan-run.shared_workspace }}*.tfvars) -lock=false -out=tfplan
+      run: terraform plan $(printf -- '-var-file=%s ' vars/${{ steps.plan-run.outputs.shared_workspace }}*.tfvars) -lock=false -out=tfplan
 
     - name: Post Plan - ${{ matrix['workspace'] }}
       uses: robburger/terraform-pr-commenter@v1
