@@ -103,7 +103,7 @@ runs:
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
-        HUMAN_OUTPUT=$(terraform show -no-color tfplan | head -1 | sed '$d')
+        HUMAN_OUTPUT=$(terraform show -no-color tfplan | head -1)
 
         # $plan=$(terraform show -json tfplan)
         # echo "$plan"
