@@ -28,9 +28,10 @@ runs:
         prod_id: ${{ inputs.PROD_AWS_ACCOUNT_ID }}
         non_prod_id: ${{ inputs.NON_PROD_AWS_ACCOUNT_ID }}
         gh_ref: ${{ github.event.ref || github.ref }}
+        gh_full_ref: ${{ github.ref }}
       run: |
         branch=${gh_ref#refs/*/}
-        if [[ $gh_ref = refs/tags/v* ]] ; then
+        if [[ $gh_full_ref = refs/tags/v* ]] ; then
           echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
           echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
           echo "ACCOUNT_ID=$prod_id" >> $GITHUB_OUTPUT
