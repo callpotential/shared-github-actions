@@ -49,7 +49,7 @@ runs:
         environment: ${{ inputs.ENVIRONMENT }}
         workspace: ${{ inputs.WORKSPACE }}
         ghcr_image_version: ${{ github.ref_name }}
-        ecr_image_version: ${{ github.ref_name }}
+        ecr_image_version: ${{ github.ref_name }}-${{ github.sha }}
       run: |
         echo "GHCR_IMAGE_NAME=$repo/$environment" >> $GITHUB_OUTPUT
         GHCR_TRIMMED_IMAGE_VERSION=$(echo $ghcr_image_version | tr / -)
