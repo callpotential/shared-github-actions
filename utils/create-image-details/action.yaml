@@ -56,9 +56,8 @@ runs:
         echo "GHCR_IMAGE_VERSION=$GHCR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
 
         echo "ECR_IMAGE_NAME=$repo/$workspace" >> $GITHUB_OUTPUT
-        ECR_TRIMMED_IMAGE_VERSION=$(echo $ecr_image_version | tr / -)
-        echo "ECR_IMAGE_VERSION=$ECR_TRIMMED_IMAGE_VERSION" >> $GITHUB_OUTPUT
-        
+        ECR_TRIMMED_IMAGE_VERSION=$(echo "${ecr_image_version:0:128}" | tr / -)
+        echo "ECR_IMAGE_VERSION=$ecr_image_version" >> $GITHUB_OUTPUT
     - if: ${{ inputs.CREATE_URI == 'true' }}
       id: image-uri
       name: "Set image uris"
