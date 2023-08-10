@@ -7,6 +7,9 @@ inputs:
   NON_PROD_AWS_ACCOUNT_ID:
     description: "Will be returned as the output 'AWS_ACCOUNT_ID' if the env is non-prod"
     required: true
+  GH_REF:
+    description: "Optional: Github ref to use for the environment setup"
+    required: false
 outputs:
   AWS_ACCOUNT_ID:
     description: "AWS account id that reflects the environment"
@@ -27,7 +30,7 @@ runs:
       env:
         prod_id: ${{ inputs.PROD_AWS_ACCOUNT_ID }}
         non_prod_id: ${{ inputs.NON_PROD_AWS_ACCOUNT_ID }}
-        gh_ref: ${{ github.event.ref || github.ref }}
+        gh_ref: ${{ inputs.GH_REF || github.event.ref || github.ref }}
         gh_full_ref: ${{ github.ref }}
       run: |
         branch=${gh_ref#refs/*/}
