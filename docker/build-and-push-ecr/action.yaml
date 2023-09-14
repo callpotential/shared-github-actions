@@ -80,9 +80,6 @@ runs:
       with:
         registry: ${{ inputs.aws_account_id }}.dkr.ecr.us-west-2.amazonaws.com
 
-    - name: Checkout
-      uses: actions/checkout@v4
-      
     - name: Build image and push to ecr
       shell: bash
       run: |
