@@ -87,7 +87,7 @@ runs:
       run: |
         cd ${{ inputs.docker_sub_dir }}
         ls -la 
-        docker build -t $ECR_IMAGE_URI ./Dockerfile
+        docker build -f $ECR_IMAGE_URI/Dockerfile .
         docker push $ECR_IMAGE_URI
 
     - name: Configure AWS credentials for shared account
