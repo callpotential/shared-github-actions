@@ -24,6 +24,8 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Validate Inputs
       env:
         image_name: ${{ inputs.image_name }}
