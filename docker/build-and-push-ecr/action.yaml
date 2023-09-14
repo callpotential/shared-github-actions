@@ -71,7 +71,7 @@ runs:
         ACCOUNT_ID: ${{ inputs.aws_account_id }}
       run: |
         ECR_TRIMMED_IMAGE_VERSION=$(echo $ECR_IMAGE_VERSION | tr / -)
-        URI = "$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$image_version"
+        URI="$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$ECR_IMAGE_NAME:$image_version"
         echo "ECR_IMAGE_URI=$URI" >> $GITHUB_ENV
         echo "ECR_IMAGE_URI=$URI" >> $GITHUB_OUTPUT
 
