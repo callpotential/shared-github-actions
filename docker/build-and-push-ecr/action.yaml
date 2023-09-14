@@ -85,7 +85,7 @@ runs:
     - name: Build image and push to ecr
       shell: bash
       run: |
-        docker build -f $ECR_IMAGE_URI/Dockerfile .
+        docker build -t $ECR_IMAGE_URI -f ${{ inputs.docker_sub_dir }}/Dockerfile .
         docker push $ECR_IMAGE_URI
 
     - name: Configure AWS credentials for shared account
