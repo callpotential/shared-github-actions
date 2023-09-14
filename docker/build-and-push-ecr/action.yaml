@@ -26,9 +26,6 @@ runs:
   steps:
     - name: Pull
       uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.deployment.ref }}
-        lfs: true
     - name: Validate Inputs
       env:
         image_name: ${{ inputs.image_name }}
@@ -89,6 +86,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.docker_sub_dir }}
+        ls -la 
         docker build -t $ECR_IMAGE_URI ./Dockerfile
         docker push $ECR_IMAGE_URI
 
