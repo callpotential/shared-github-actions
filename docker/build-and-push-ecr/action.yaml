@@ -85,8 +85,6 @@ runs:
     - name: Build image and push to ecr
       shell: bash
       run: |
-        cd ${{ inputs.docker_sub_dir }}
-        ls -la 
         docker build -f $ECR_IMAGE_URI/Dockerfile .
         docker push $ECR_IMAGE_URI
 
