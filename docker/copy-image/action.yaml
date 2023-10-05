@@ -45,7 +45,7 @@ runs:
         inputs[process_name]="$process_name"
         inputs[environment]="$ENVIRONMENT"
         inputs[ecr_image_version]="$ECR_IMAGE_VERSION"
-        inputs[ghcr_image_version]="$GHCR_IMAGE_VERSION"
+        inputs[ghcr_image_version]="$GHCR_I MAGE_VERSION"
         inputs[aws_account_id]="$AWS_ACCOUNT_ID"
 
         validateInput inputs
