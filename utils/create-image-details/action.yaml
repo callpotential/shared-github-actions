@@ -1,9 +1,6 @@
 name: "Create Image Details"
 description: "Creates details like URI and Image Name for ECR and GHCR images."
 inputs:
-  ENVIRONMENT:
-    description: "The deployment environment"
-    required: true
   WORKSPACE:
     description: "Current terraform workspace, this is used to set the ECR details."
     required: true
