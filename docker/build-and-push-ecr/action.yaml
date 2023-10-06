@@ -13,6 +13,10 @@ inputs:
   docker_sub_dir:
     description: "[string] The directory to find the dockerfile"
     required: true
+  base_path:
+    description: "[string] path to cd into to run the docker build command(s)"
+    default: '.'
+    required: false
 outputs:
   ECR_IMAGE_NAME:
     description: "[string] The name of the copied image into ecr"
@@ -85,6 +89,7 @@ runs:
     - name: Build image and push to ecr
       shell: bash
       run: |
+        cd ${{ inputs.base_path }}
         docker build -t $ECR_IMAGE_URI -f ${{ inputs.docker_sub_dir }}/Dockerfile .
         docker push $ECR_IMAGE_URI
 
