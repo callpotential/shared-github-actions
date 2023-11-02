@@ -93,7 +93,7 @@ runs:
           echo "No changes detected."
           echo "changes_detected=false" >> $GITHUB_OUTPUT
         elif [ $EXIT_CODE -eq 1 ]; then
-          echo "Error running plan."
+          echo "Error running plan. $EXIT_CODE $?"
           echo $JSON_OUTPUT
           exit 1
         elif [ $EXIT_CODE -eq 2 ]; then
