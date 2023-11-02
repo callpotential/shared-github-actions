@@ -65,9 +65,8 @@ runs:
       with:
         ref: ${{ inputs.checkout_ref }}
         lfs: true
-    # Adding the below step to allow us to reacquire the eks token after the 15 min timeout
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ env.GH_AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ env.GH_AWS_SECRET_KEY }}
