@@ -15,6 +15,10 @@ inputs:
     description: "[string] (i.e aws_ecr_repository.name module.name) Terraform resources to target during the plan. Seperate multiple resources with a space ' ' . See https://developer.hashicorp.com/terraform/tutorials/state/resource-targeting"
     required: false
     default: ""
+  use_shared_workspaces:
+    description: '[bool] (i.e. true/false) Whether or not to use shared workspaces.'
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -57,7 +61,7 @@ runs:
     - name: TF Apply
       working-directory: ./infrastructure
       run: |
-        if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
+        if [ "${{ inputs.use_shared_workspaces }}" == "false" ] || [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
           shared_workspace=${{ inputs.terraform_workspace }}
         else
           shared_workspace=default

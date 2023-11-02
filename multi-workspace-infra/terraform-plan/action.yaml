@@ -23,12 +23,8 @@ inputs:
     description: "[string][advanced][do not use] A targeted resource to have terraform `apply` prior to planning.  USE WITH CAUTION."
     required: false
     default: ""
-  use_beta_commenter:
-    description: "[bool] Whether to use the beta version of the PR commenter (see the v2-beta tag on its repo)."
-    required: false
-    default: "false"
-  enable_tflint:
-    description: "[bool] (i.e. true/false) Whether or not to enable and run tflint."
+  use_shared_workspaces:
+    description: '[bool] (i.e. true/false) Whether or not to use shared workspaces.'
     required: false
     default: "true"
 
@@ -80,7 +76,7 @@ runs:
       shell: bash
       working-directory: ./infrastructure
       run: |
-        if [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
+        if [ "${{ inputs.use_shared_workspaces }}" == "false" ] || [ "${{ inputs.terraform_workspace }}" == "prod" ] || [ "${{ inputs.terraform_workspace }}" == "stage" ] || [ "${{ inputs.terraform_workspace }}" == "qa" ] ; then
           shared_workspace=${{ inputs.terraform_workspace }}
         else
           shared_workspace=default
