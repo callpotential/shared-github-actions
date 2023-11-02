@@ -87,12 +87,14 @@ runs:
         terraform validate
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
-        terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode
-        
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode)
+        terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode && true
+
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode) && true
         echo $JSON_OUTPUT
         if [ $? -eq 0 ]; then
           echo "changes_detected=false" >> $GITHUB_OUTPUT
+        elif [ $? -eq 1 ]; then
+          exit 1
         elif [ $? -eq 2 ]; then
           echo "changes_detected=true" >> $GITHUB_OUTPUT
         fi
