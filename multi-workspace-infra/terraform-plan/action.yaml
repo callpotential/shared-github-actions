@@ -32,6 +32,11 @@ inputs:
     required: false
     default: "true"
 
+outputs:
+  changes_detected:
+    description: "Whether or not changes were detected in the plan.(true/false)"
+    value: ${{ steps.plan-run.outputs.changes_detected }}
+
 runs:
   using: "composite"
   steps:
@@ -93,22 +98,21 @@ runs:
           shared_workspace=default
         fi
 
-
-
         terraform version
         terraform init -lock=false -input=false
         terraform validate
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
 
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan)
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode)
+        if [ $? -eq 0 ]; then
+          echo "changes_detected=false" >> $GITHUB_OUTPUT
+        elif [ $? -eq 2 ]; then
+          echo "changes_detected=true" >> $GITHUB_OUTPUT
+        fi
+
         CHANGE_SUMMARY=$(echo $JSON_OUTPUT | sed -r 's/%0A/\n/g' | jq -R 'fromjson? | select(type == "object")' | jq -s '.[] | select(.type == "change_summary") | .["@message"]' | sed 's/|[\"]|//g' | head -1)
         HUMAN_OUTPUT=$(terraform show -no-color tfplan)
-
-        # $plan=$(terraform show -json tfplan)
-        # echo "$plan"
-        # SUM=$(echo "$plan" | tf-summarize -md)
-        # echo "$SUM"
 
         echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
         echo "$CHANGE_SUMMARY" >> $GITHUB_ENV
@@ -117,11 +121,8 @@ runs:
         echo "HUMAN_OUTPUT<<EOF" >> $GITHUB_ENV
         echo "${HUMAN_OUTPUT::65000}" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-
-        # echo "shared_workspace=$shared_workspace" >> $GITHUB_OUTPUT
-        # echo "HUMAN_OUTPUT=$HUMAN_OUTPUT" >> $GITHUB_OUTPUT
-
-    - name: Update PR
+    - if: ${{ inputs.enable_plan_commenter == 'true' }}
+      name: Update PR
       uses: actions/github-script@v6
       id: plan-comment
       with:
