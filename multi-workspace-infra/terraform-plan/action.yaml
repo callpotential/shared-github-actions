@@ -75,17 +75,6 @@ runs:
       uses: hashicorp/setup-terraform@v1.2.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
-    # - name: Install terraform-plan-summary
-    #   shell: bash
-    #   run: |
-    #     REPO="dineshba/terraform-plan-summary"
-    #     curl -LO https://github.com/$REPO/releases/latest/download/tf-summarize_linux_amd64.zip
-    #     tmpDir=$(mktemp -d -t tmp.XXXXXXXXXX)
-    #     mv tf-summarize_linux_amd64.zip $tmpDir
-    #     cd $tmpDir
-    #     unzip tf-summarize_linux_amd64.zip
-    #     chmod +x tf-summarize
-    #     echo $PWD >> $GITHUB_PATH
     - name: TF Plan
       id: plan-run
       shell: bash
@@ -104,6 +93,7 @@ runs:
         terraform workspace show
 
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode)
+        echo $JSON_OUTPUT
         if [ $? -eq 0 ]; then
           echo "changes_detected=false" >> $GITHUB_OUTPUT
         elif [ $? -eq 2 ]; then
