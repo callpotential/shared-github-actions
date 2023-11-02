@@ -88,7 +88,7 @@ runs:
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
 
-        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode) && true
+        JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode) || true
         if [ $? -eq 0 ]; then
           echo "No changes detected."
           echo "changes_detected=false" >> $GITHUB_OUTPUT
