@@ -87,7 +87,8 @@ runs:
         terraform validate
         terraform workspace select ${{ inputs.terraform_workspace }}
         terraform workspace show
-
+        terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode
+        
         JSON_OUTPUT=$(terraform plan $(printf -- '-var-file=%s ' vars/$shared_workspace*.tfvars) -lock=false -input=false -json -out=tfplan -detailed-exitcode)
         echo $JSON_OUTPUT
         if [ $? -eq 0 ]; then
