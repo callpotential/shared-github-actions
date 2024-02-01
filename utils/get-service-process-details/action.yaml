@@ -46,7 +46,7 @@ runs:
 
           # Check if the process_sub_directory exists for the service
           if [ ! -d "./$service/${{ inputs.process_sub_directory }}" ]; then
-            echo "Skipping $service, ${inputs.process_sub_directory} directory not found."
+            echo "Skipping $service, directory not found."
             continue # Skip this service and move to the next one
           fi
           
