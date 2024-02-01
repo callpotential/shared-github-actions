@@ -43,6 +43,13 @@ runs:
 
         for service in $(echo '${{ steps.get-service-names.outputs.service_names }}' | jq -r '.[]'); do
           echo "getting process info for $service"
+
+          # Check if the process_sub_directory exists for the service
+          if [ ! -d "./$service/${{ inputs.process_sub_directory }}" ]; then
+            echo "Skipping $service, ${inputs.process_sub_directory} directory not found."
+            continue # Skip this service and move to the next one
+          fi
+          
           result_list=$(getDirNames ./$service/${{ inputs.process_sub_directory }})
           process_names=$(echo "$result_list $process_names" | jq --compact-output -s "add"); 
           process_service_list="[]"
