@@ -21,8 +21,9 @@ jobs:
 
   # Runs the real composite action, so a wrong $GITHUB_ACTION_PATH, env: mapping or missing
   # shell: fails here, before a v1 retag reaches the repos that consume it.
-  # It posts its two comments (smoke-pass, smoke-fail) on the PR, which exercises the real
-  # comment path too, so it needs pull-requests: write.
+  # It posts its two comments ('self-test: expected pass' and 'self-test: expected FAIL') on
+  # the PR, which exercises the real comment path too, so it needs pull-requests: write. The
+  # labels say these are the action testing itself on fixture repos, not this PR's coverage.
   smoke:
     runs-on: ubuntu-latest
     permissions:
@@ -42,7 +43,7 @@ jobs:
           format: clover
           base-ref: main
           working-directory: ${{ runner.temp }}/fixture-pass
-          label: smoke-pass
+          label: 'self-test: expected pass'
 
       - name: A failing fixture
         id: failing
@@ -53,7 +54,7 @@ jobs:
           format: clover
           base-ref: main
           working-directory: ${{ runner.temp }}/fixture-fail
-          label: smoke-fail
+          label: 'self-test: expected FAIL'
 
       - name: The failing fixture must fail the action
         if: steps.failing.outcome != 'failure'
