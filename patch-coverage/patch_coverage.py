@@ -42,7 +42,7 @@ def load_config(env):
         raise InputError(
             f"format must be one of {', '.join(FORMATS)}, got {fmt!r}"
         )
-    raw_threshold = env.get("INPUT_THRESHOLD", "85").strip() or "85"
+    raw_threshold = env.get("INPUT_THRESHOLD", "80").strip() or "80"
     try:
         threshold = float(raw_threshold)
     except ValueError:

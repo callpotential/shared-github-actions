@@ -54,12 +54,14 @@ CASE="AC1 label in heading"; new_repo 3
 run_pc INPUT_LABEL=php
 expect_out "Patch coverage (php)"
 
-CASE="AC2 at the threshold passes"; new_repo 15
-run_pc; expect_code 0; expect_out "85.0%"
-CASE="AC2 below the threshold fails"; new_repo 16
-run_pc; expect_code 1; expect_out "84.0%"; expect_out "Result: FAIL"
-CASE="AC2 threshold input moves the gate"; new_repo 16
-run_pc INPUT_THRESHOLD=80; expect_code 0
+CASE="AC2 at the threshold passes"; new_repo 20
+run_pc; expect_code 0; expect_out "80.0%"
+CASE="AC2 below the threshold fails"; new_repo 21
+run_pc; expect_code 1; expect_out "79.0%"; expect_out "Result: FAIL"
+CASE="AC2 threshold input moves the gate"; new_repo 21
+run_pc INPUT_THRESHOLD=75; expect_code 0
+CASE="AC2 threshold input raises the gate"; new_repo 15
+run_pc INPUT_THRESHOLD=90; expect_code 1
 CASE="AC2 no executable changed lines passes"; new_repo 16
 run_pc INPUT_BASE_REF=HEAD; expect_code 0; expect_out "No executable changed lines"
 
@@ -221,7 +223,7 @@ run_gh INPUT_LABEL=ph; [ "$(n_comments)" = 3 ] && ok || bad "want 3 comments, ha
 CASE="list uses --paginate and the repos/ path"
 case "$(calls | head -1)" in '["api", "--paginate", "repos/o/r/issues/7/comments", "--jq", ".[] | {id, user: .user.login, body}"]') ok ;; *) bad "list call: $(calls | head -1)" ;; esac
 
-CASE="AC4 failing gate still updates the comment, exit 1"; new_pr 16
+CASE="AC4 failing gate still updates the comment, exit 1"; new_pr 21
 run_gh INPUT_LABEL=php; expect_code 1
 run_gh INPUT_LABEL=php; expect_code 1
 [ "$(n_comments)" = 1 ] && [ "$(calls | grep -c PATCH)" = 1 ] && ok || bad "want 1 comment edited once"
@@ -255,7 +257,7 @@ expect_out "no pull request"
 CASE="AC13 a 403 fails with the status and the permission, and leaks no token"; new_pr 0
 run_gh GH_STUB_WRITE_FAIL=403; expect_code 2; expect_out "gh api failed (HTTP 403)"; expect_out "pull-requests: write"
 expect_not_out "secret-token-123"
-CASE="AC13 a failing gate plus a failing comment keeps exit 1"; new_pr 16
+CASE="AC13 a failing gate plus a failing comment keeps exit 1"; new_pr 21
 run_gh GH_STUB_WRITE_FAIL=403; expect_code 1; expect_out "gh api failed (HTTP 403)"
 
 echo

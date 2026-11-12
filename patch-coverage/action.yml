@@ -20,7 +20,7 @@ inputs:
     description: Directory the reports and lcov SF paths are relative to.
   threshold:
     required: false
-    default: '85'
+    default: '80'
     description: Minimum patch coverage in percent, 0 to 100.
   label:
     required: false
