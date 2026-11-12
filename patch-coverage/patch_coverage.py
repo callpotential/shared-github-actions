@@ -180,29 +180,24 @@ def sum_totals(pairs):
 # ---- path resolution -------------------------------------------------------
 
 
-def unix(path):
-    return path.replace("\\", "/")
+REPORT_MATCH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report_match.py")
 
 
-def resolved_tracked(report_paths, tracked, wd_rel, xml):
-    """Tracked files the report's paths resolve to, by diff-cover's rule.
+def measured_tracked(diff_inputs, tracked, wd, genv):
+    """Tracked files diff-cover itself measures in the reports (report_match.py).
 
-    A relative path matches root-relative (XML paths are relative to the working
-    directory); any path also matches by suffix, as diff-cover matches absolute paths.
+    Asking diff-cover, rather than copying its path rules, keeps AC 7 from passing a
+    report whose paths diff-cover then matches to nothing.
     """
-    found = set()
-    for raw in report_paths:
-        p = unix(raw)
-        if not p.startswith("/"):
-            rel = posixpath.normpath(posixpath.join(wd_rel, p) if xml else p)
-            if rel in tracked:
-                found.add(rel)
-        parts = [x for x in p.split("/") if x not in ("", ".")]
-        for i in range(len(parts)):
-            cand = "/".join(parts[i:])
-            if cand in tracked:
-                found.add(cand)
-    return found
+    proc = subprocess.run(
+        [sys.executable, REPORT_MATCH, *diff_inputs],
+        cwd=wd, env=genv, input="\n".join(sorted(tracked)) + "\n",
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr)
+        raise InputError(f"cannot match the report paths (exit {proc.returncode}); see above")
+    return {line for line in proc.stdout.splitlines() if line}
 
 
 def rewrite_lcov(text, root, wd_rel):
@@ -368,7 +363,7 @@ def run(env, cwd, tmp):
     if code != 0:
         raise InputError(f"git ls-files failed: {err.strip()}")
     tracked = {t for t in out.split("\0") if t}
-    in_report = resolved_tracked(names, tracked, wd_rel, xml)
+    in_report = measured_tracked(diff_inputs, tracked, wd, genv)
     if not in_report:
         sample = ", ".join(sorted(set(names))[:3]) or "(none)"
         raise InputError(

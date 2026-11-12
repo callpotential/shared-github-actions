@@ -110,6 +110,20 @@ run_pc; expect_code 0; expect_out "No executable changed lines"; expect_out "- \
 CASE="AC7 Nx lcov without the workspace rewrite would not match"; new_repo 0
 run_pc INPUT_FORMAT=lcov INPUT_REPORTS=reports/nx-lcov.info   # wd '.', SF relative to cp-workspace
 expect_code 2; expect_out "don't match the checkout"
+# The AC 7 check must match by diff-cover's own rules: a path it suffix-matched but
+# diff-cover didn't measured nothing and passed (code review).
+CASE="AC7 lcov with container SF paths fails"; new_repo 100
+sed -i 's#^SF:src/#SF:/app/src/#' "$REPO/reports/lcov.info"
+run_pc INPUT_FORMAT=lcov INPUT_REPORTS=reports/lcov.info; expect_code 2; expect_out "don't match the checkout"
+CASE="AC7 cobertura with container filenames fails"; new_repo 100
+sed -i 's#filename="src/#filename="/app/src/#' "$REPO/reports/cobertura.xml"
+run_pc INPUT_FORMAT=cobertura INPUT_REPORTS=reports/cobertura.xml; expect_code 2; expect_out "don't match the checkout"
+CASE="AC7 clover relative to a subdirectory working-directory fails"; new_repo 100
+sed -i "s#name=\"$REPO/src/calc.php\"#name=\"calc.php\"#" "$REPO/reports/clover.xml"
+run_pc INPUT_REPORTS=../reports/clover.xml INPUT_WORKING_DIRECTORY=src; expect_code 2; expect_out "don't match the checkout"
+CASE="AC7 clover with container paths under the repo root still matches"; new_repo 100
+sed -i "s#name=\"$REPO/#name=\"/var/www/html/#" "$REPO/reports/clover.xml"
+run_pc; expect_code 1; expect_out "0/100 changed lines covered"
 
 # --- AC 10: base ref --------------------------------------------------------------------
 CASE="AC10 base ref missing (shallow clone)"; new_repo 0
