@@ -1,0 +1,58 @@
+name: patch-coverage
+description: >-
+  Gate a PR on patch coverage: runs a pinned diff-cover on the coverage reports the tests
+  already wrote, fails below the threshold, writes the job summary and one sticky PR comment
+  per label.
+
+inputs:
+  reports:
+    required: true
+    description: Coverage report paths, one per line, relative to working-directory. All of one format.
+  format:
+    required: true
+    description: One of clover, lcov, cobertura.
+  base-ref:
+    required: true
+    description: The ref the PR is compared against, already fetched (for example origin/main).
+  working-directory:
+    required: false
+    default: '.'
+    description: Directory the reports and lcov SF paths are relative to.
+  threshold:
+    required: false
+    default: '85'
+    description: Minimum patch coverage in percent, 0 to 100.
+  label:
+    required: false
+    default: patch-coverage
+    description: Names the PR comment. Use one label per job.
+  extensions:
+    required: false
+    default: ''
+    description: >-
+      Comma-separated extensions of the source files that should be in the report. Defaults per
+      format (clover .php, lcov .ts,.tsx,.js, cobertura .py). Only scopes the list of changed
+      files missing from the report.
+
+runs:
+  using: composite
+  steps:
+    - name: Install diff-cover
+      shell: bash
+      env:
+        PATCH_COVERAGE_PKGS: ${{ runner.temp }}/patch-coverage/pkgs
+      run: bash "$GITHUB_ACTION_PATH/install.sh"
+
+    - name: Check patch coverage
+      shell: bash
+      env:
+        PATCH_COVERAGE_PKGS: ${{ runner.temp }}/patch-coverage/pkgs
+        INPUT_REPORTS: ${{ inputs.reports }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_THRESHOLD: ${{ inputs.threshold }}
+        INPUT_LABEL: ${{ inputs.label }}
+        INPUT_EXTENSIONS: ${{ inputs.extensions }}
+        GH_TOKEN: ${{ github.token }}
+      run: python3 "$GITHUB_ACTION_PATH/patch_coverage.py" run

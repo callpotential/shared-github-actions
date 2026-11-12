@@ -12,5 +12,5 @@ if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)';
   exit 2
 fi
 
-python3 -m pip install --quiet --disable-pip-version-check --target "$PKGS" "diff-cover==${DIFF_COVER_VERSION}"
+python3 -m pip install --quiet --no-warn-conflicts --disable-pip-version-check --target "$PKGS" "diff-cover==${DIFF_COVER_VERSION}"
 echo "patch-coverage: installed $(PYTHONPATH="$PKGS" python3 -m diff_cover.diff_cover_tool --version) into $PKGS"
