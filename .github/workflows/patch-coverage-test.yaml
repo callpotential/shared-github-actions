@@ -1,0 +1,65 @@
+name: patch-coverage-test
+
+on:
+  pull_request:
+    paths:
+      - 'patch-coverage/**'
+      - '.github/workflows/patch-coverage-test.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    # No job-level PATCH_COVERAGE_PKGS: the runner context isn't available there, and
+    # install.sh and run.sh both default to $RUNNER_TEMP/patch-coverage/pkgs.
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - run: bash patch-coverage/install.sh
+      - run: bash patch-coverage/test/run.sh
+
+  # Runs the real composite action, so a wrong $GITHUB_ACTION_PATH, env: mapping or missing
+  # shell: fails here, before a v1 retag reaches the repos that consume it.
+  # It posts its two comments ('self-test: expected pass' and 'self-test: expected FAIL') on
+  # the PR, which exercises the real comment path too, so it needs pull-requests: write. The
+  # labels say these are the action testing itself on fixture repos, not this PR's coverage.
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Build the passing and failing fixture repos
+        run: |
+          bash patch-coverage/test/make-fixture-repo.sh "$RUNNER_TEMP/fixture-pass" 0
+          bash patch-coverage/test/make-fixture-repo.sh "$RUNNER_TEMP/fixture-fail" 100
+
+      - name: A passing fixture
+        uses: ./patch-coverage
+        with:
+          reports: reports/clover.xml
+          format: clover
+          base-ref: main
+          working-directory: ${{ runner.temp }}/fixture-pass
+          label: 'self-test: expected pass'
+
+      - name: A failing fixture
+        id: failing
+        continue-on-error: true
+        uses: ./patch-coverage
+        with:
+          reports: reports/clover.xml
+          format: clover
+          base-ref: main
+          working-directory: ${{ runner.temp }}/fixture-fail
+          label: 'self-test: expected FAIL'
+
+      - name: The failing fixture must fail the action
+        if: steps.failing.outcome != 'failure'
+        env:
+          OUTCOME: ${{ steps.failing.outcome }}
+        run: |
+          echo "expected the failing fixture to fail the action, got: $OUTCOME"
+          exit 1
