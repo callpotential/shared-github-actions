@@ -235,6 +235,17 @@ def format_lines(lines):
     return ", ".join(str(a) if a == b else f"{a}-{b}" for a, b in ranges)
 
 
+# Each file list in the summary is capped, so the PR comment stays under GitHub's
+# 65,536-character body limit (a longer one is rejected with HTTP 422).
+MAX_LISTED = 50
+
+
+def more_line(count):
+    if count <= MAX_LISTED:
+        return []
+    return [f"…and {count - MAX_LISTED} more.", ""]
+
+
 def compose_summary(cfg, measured, uncovered, pct, passed, src_stats, total, not_in_report):
     lines = [f"## Patch coverage ({cfg['label']})", ""]
     if measured == 0:
@@ -252,8 +263,9 @@ def compose_summary(cfg, measured, uncovered, pct, passed, src_stats, total, not
     rows = [(f, v) for f, v in rows if v]
     if rows:
         lines += ["| File | Uncovered changed lines |", "|---|---|"]
-        lines += [f"| `{f}` | {format_lines(v)} |" for f, v in rows]
+        lines += [f"| `{f}` | {format_lines(v)} |" for f, v in rows[:MAX_LISTED]]
         lines.append("")
+        lines += more_line(len(rows))
     if total is None:
         lines.append("Head total coverage: unavailable.")
     else:
@@ -268,7 +280,9 @@ def compose_summary(cfg, measured, uncovered, pct, passed, src_stats, total, not
             "Changed files the report doesn't list, so their lines aren't measured:",
             "",
         ]
-        lines += [f"- `{f}`" for f in not_in_report]
+        lines += [f"- `{f}`" for f in not_in_report[:MAX_LISTED]]
+        if len(not_in_report) > MAX_LISTED:
+            lines += ["", *more_line(len(not_in_report))]
     return "\n".join(lines) + "\n"
 
 

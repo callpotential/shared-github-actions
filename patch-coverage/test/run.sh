@@ -184,6 +184,11 @@ CASE="new file absent from the report is listed, ungated"; new_repo 0
 (cd "$REPO" && echo '<?php $n = 1;' > src/new.php && git add src/new.php && git commit -qm new)
 run_pc; expect_code 0; expect_out "### Not in the coverage report"; expect_out "- \`src/new.php\`"
 
+CASE="a long not-in-report list is capped under GitHub's comment size limit"; new_repo 0
+(cd "$REPO" && mkdir gen && for i in $(seq 1 1500); do echo '<?php $g = 1;' > "gen/generated_file_with_a_long_name_$i.php"; done && git add gen && git commit -qm gen)
+run_pc; expect_code 0; expect_out "and 1450 more"
+[ "$(printf '%s' "$OUT" | wc -c)" -lt 65536 ] && ok || bad "output is $(printf '%s' "$OUT" | wc -c) chars"
+
 # --- Step 2: the sticky PR comment, against a stub gh -----------------------------------
 GHBIN="$SCRATCH/ghbin"; mkdir -p "$GHBIN"
 printf '#!/usr/bin/env bash\nexec python3 "%s/gh-stub.py" "$@"\n' "$HERE" > "$GHBIN/gh"; chmod +x "$GHBIN/gh"
