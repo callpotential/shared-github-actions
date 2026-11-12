@@ -420,7 +420,95 @@ def run(env, cwd, tmp):
     if summary_file:
         with open(summary_file, "a", encoding="utf-8") as fh:
             fh.write(summary)
-    return (EXIT_PASS if passed else EXIT_GATE), summary
+    return (EXIT_PASS if passed else EXIT_GATE), summary, cfg
+
+
+# ---- sticky PR comment -----------------------------------------------------
+
+COMMENT_AUTHOR = "github-actions[bot]"  # the github.token user
+LIST_JQ = ".[] | {id, user: .user.login, body}"
+PERMISSION_HINT = "add `permissions: pull-requests: write` to the calling job"
+
+
+class CommentError(Exception):
+    """The comment couldn't be listed, edited or posted."""
+
+
+def pull_request_number(env):
+    path = env.get("GITHUB_EVENT_PATH")
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            number = (json.load(fh).get("pull_request") or {}).get("number")
+    except (ValueError, OSError, AttributeError):
+        return None
+    return number if isinstance(number, int) else None
+
+
+def parse_json_stream(text):
+    decoder, i, out = json.JSONDecoder(), 0, []
+    while True:
+        while i < len(text) and text[i].isspace():
+            i += 1
+        if i >= len(text):
+            return out
+        obj, i = decoder.raw_decode(text, i)
+        out.append(obj)
+
+
+def gh_api(env, args):
+    """Run `gh api`; on failure raise CommentError with the redacted stderr and HTTP status."""
+    token = env.get("GH_TOKEN", "")
+    try:
+        proc = subprocess.run(["gh", "api", *args], env=env, capture_output=True, text=True, check=False)
+    except OSError as e:
+        raise CommentError(f"cannot run gh: {e}")
+    if proc.returncode != 0:
+        stderr = proc.stderr.replace(token, "***") if token else proc.stderr
+        status = re.search(r"HTTP (\d{3})", stderr)
+        raise CommentError(
+            f"gh api failed (HTTP {status.group(1) if status else 'unknown'}): {stderr.strip()}. "
+            f"If this is a permission error, {PERMISSION_HINT}."
+        )
+    return proc.stdout
+
+
+def sticky_comment(env, cfg, summary, tmp):
+    """Edit this label's comment on the PR, or post it. No PR: log and skip (AC 12)."""
+    number = pull_request_number(env)
+    if number is None:
+        print("patch-coverage: no pull request in this event; job summary only, no comment")
+        return
+    repo = env.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        raise CommentError("GITHUB_REPOSITORY is not set")
+    base = f"repos/{repo}"
+    marker = f"<!-- patch-coverage:{cfg['label']} -->"
+
+    listing = gh_api(env, ["--paginate", f"{base}/issues/{number}/comments", "--jq", LIST_JQ])
+    try:
+        comments = parse_json_stream(listing)
+    except ValueError as e:
+        raise CommentError(f"cannot parse the comment list from gh: {e}")
+    ids = sorted(
+        c["id"]
+        for c in comments
+        if isinstance(c, dict)
+        and c.get("user") == COMMENT_AUTHOR
+        and marker in (c.get("body") or "")
+        and isinstance(c.get("id"), int)
+    )
+
+    payload = os.path.join(tmp, "comment.json")
+    with open(payload, "w", encoding="utf-8") as fh:
+        json.dump({"body": marker + "\n" + summary}, fh)
+    if ids:
+        gh_api(env, ["--method", "PATCH", f"{base}/issues/comments/{ids[0]}", "--input", payload])
+        print(f"patch-coverage: updated comment {ids[0]} for label {cfg['label']!r}")
+    else:
+        gh_api(env, ["--method", "POST", f"{base}/issues/{number}/comments", "--input", payload])
+        print(f"patch-coverage: posted a comment for label {cfg['label']!r}")
 
 
 def main(argv, env=None, cwd=None):
@@ -431,10 +519,16 @@ def main(argv, env=None, cwd=None):
         return EXIT_ERROR
     with tempfile.TemporaryDirectory(prefix="patch-coverage-") as tmp:
         try:
-            code, _ = run(env, cwd, tmp)
+            code, summary, cfg = run(env, cwd, tmp)
         except InputError as e:
             print(f"patch-coverage: error: {e}", file=sys.stderr)
             return EXIT_ERROR
+        try:
+            sticky_comment(env, cfg, summary, tmp)
+        except CommentError as e:
+            print(f"patch-coverage: error: {e}", file=sys.stderr)
+            if code == EXIT_PASS:  # the gate's own failure code wins when both fail
+                code = EXIT_ERROR
     return code
 
 

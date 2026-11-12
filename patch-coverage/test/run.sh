@@ -170,6 +170,75 @@ CASE="new file absent from the report is listed, ungated"; new_repo 0
 (cd "$REPO" && echo '<?php $n = 1;' > src/new.php && git add src/new.php && git commit -qm new)
 run_pc; expect_code 0; expect_out "### Not in the coverage report"; expect_out "- \`src/new.php\`"
 
+# --- Step 2: the sticky PR comment, against a stub gh -----------------------------------
+GHBIN="$SCRATCH/ghbin"; mkdir -p "$GHBIN"
+printf '#!/usr/bin/env bash\nexec python3 "%s/gh-stub.py" "$@"\n' "$HERE" > "$GHBIN/gh"; chmod +x "$GHBIN/gh"
+new_pr() { # new_pr [UNCOVERED]: a repo plus a stub-gh state dir and a PR event file
+  new_repo "${1:-0}"
+  GHD=$(mktemp -d -p "$SCRATCH")
+  printf '{"pull_request":{"number":7}}' > "$GHD/event.json"
+}
+# run_gh [VAR=value ...]: run_pc with the stub gh first on PATH and a PR event
+run_gh() {
+  run_pc PATH="$GHBIN:$PATH" GH_STUB_DIR="$GHD" GITHUB_EVENT_PATH="$GHD/event.json" \
+    GITHUB_REPOSITORY=o/r GITHUB_EVENT_NAME=pull_request GH_TOKEN=secret-token-123 "$@"
+}
+calls() { cat "$GHD/calls.log" 2>/dev/null; }
+bodies() { python3 -c 'import json,sys; [print(c["id"], repr(c["body"][:60])) for c in json.load(open(sys.argv[1]))]' "$GHD/comments.json"; }
+n_comments() { python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$GHD/comments.json"; }
+
+CASE="AC4 first run posts, second run with the same label edits"; new_pr 3
+run_gh INPUT_LABEL=php; expect_code 0
+run_gh INPUT_LABEL=php; expect_code 0
+[ "$(n_comments)" = 1 ] && ok || bad "want 1 comment, have $(n_comments)"
+[ "$(calls | grep -c PATCH)" = 1 ] && ok || bad "want 1 PATCH"
+[ "$(calls | grep -c POST)" = 1 ] && ok || bad "want 1 POST"
+case "$(bodies)" in *"<!-- patch-coverage:php -->"*) ok ;; *) bad "marker missing: $(bodies)" ;; esac
+CASE="AC4 a second label gets its own comment"
+run_gh INPUT_LABEL=ts; expect_code 0
+[ "$(n_comments)" = 2 ] && ok || bad "want 2 comments, have $(n_comments)"
+CASE="AC4 a label that prefixes another doesn't match it"
+run_gh INPUT_LABEL=ph; [ "$(n_comments)" = 3 ] && ok || bad "want 3 comments, have $(n_comments)"
+CASE="list uses --paginate and the repos/ path"
+case "$(calls | head -1)" in '["api", "--paginate", "repos/o/r/issues/7/comments", "--jq", ".[] | {id, user: .user.login, body}"]') ok ;; *) bad "list call: $(calls | head -1)" ;; esac
+
+CASE="AC4 failing gate still updates the comment, exit 1"; new_pr 16
+run_gh INPUT_LABEL=php; expect_code 1
+run_gh INPUT_LABEL=php; expect_code 1
+[ "$(n_comments)" = 1 ] && [ "$(calls | grep -c PATCH)" = 1 ] && ok || bad "want 1 comment edited once"
+
+CASE="label with a quote and a backslash round-trips"; new_pr 0
+run_gh 'INPUT_LABEL=a"b\c'; expect_code 0
+run_gh 'INPUT_LABEL=a"b\c'; expect_code 0
+[ "$(n_comments)" = 1 ] && [ "$(calls | grep -c PATCH)" = 1 ] && ok || bad "want 1 comment edited once"
+
+CASE="a comment by another user quoting the marker is ignored"; new_pr 0
+printf '[{"id":5,"user":"mallory","body":"<!-- patch-coverage:php --> hi"}]' > "$GHD/comments.json"
+run_gh INPUT_LABEL=php; expect_code 0
+[ "$(n_comments)" = 2 ] && [ "$(calls | grep -c PATCH)" = 0 ] && ok || bad "want a POST, no PATCH"
+
+CASE="several matching comments: the lowest id is edited"; new_pr 0
+printf '[{"id":9,"user":"github-actions[bot]","body":"<!-- patch-coverage:php --> x"},{"id":4,"user":"github-actions[bot]","body":"<!-- patch-coverage:php --> y"}]' > "$GHD/comments.json"
+run_gh INPUT_LABEL=php; expect_code 0
+case "$(calls | grep PATCH)" in *"repos/o/r/issues/comments/4"*) ok ;; *) bad "PATCH: $(calls | grep PATCH)" ;; esac
+
+CASE="a failing list call never falls through to POST"; new_pr 0
+run_gh GH_STUB_LIST_FAIL=500 INPUT_LABEL=php; expect_code 2; expect_out "gh api failed (HTTP 500)"
+[ "$(calls | grep -c POST)" = 0 ] && ok || bad "POSTed after a failed list"
+
+CASE="AC12 a push run writes the summary and never calls gh"; new_pr 3
+printf '{"ref":"refs/heads/main"}' > "$GHD/event.json"
+run_gh GITHUB_EVENT_NAME=push GITHUB_STEP_SUMMARY="$GHD/summary.md"; expect_code 0
+[ ! -e "$GHD/calls.log" ] && ok || bad "gh was called"
+grep -q "Patch coverage" "$GHD/summary.md" && ok || bad "summary not written"
+expect_out "no pull request"
+
+CASE="AC13 a 403 fails with the status and the permission, and leaks no token"; new_pr 0
+run_gh GH_STUB_WRITE_FAIL=403; expect_code 2; expect_out "gh api failed (HTTP 403)"; expect_out "pull-requests: write"
+expect_not_out "secret-token-123"
+CASE="AC13 a failing gate plus a failing comment keeps exit 1"; new_pr 16
+run_gh GH_STUB_WRITE_FAIL=403; expect_code 1; expect_out "gh api failed (HTTP 403)"
+
 echo
 echo "passed: $PASSED, failed: $FAILED"
 [ "$FAILED" -eq 0 ]
