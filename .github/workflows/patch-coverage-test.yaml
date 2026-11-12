@@ -12,8 +12,8 @@ permissions:
 jobs:
   fixtures:
     runs-on: ubuntu-latest
-    env:
-      PATCH_COVERAGE_PKGS: ${{ runner.temp }}/patch-coverage/pkgs
+    # No job-level PATCH_COVERAGE_PKGS: the runner context isn't available there, and
+    # install.sh and run.sh both default to $RUNNER_TEMP/patch-coverage/pkgs.
     steps:
       - uses: actions/checkout@v4.2.2
       - run: bash patch-coverage/install.sh
