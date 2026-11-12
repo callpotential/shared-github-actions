@@ -49,6 +49,7 @@ steps:
       base-ref: origin/${{ github.base_ref }}
       label: php
 ```
+**Note:** The runner needs `python3` >= 3.10 with `pip` (`ubuntu-latest` has both). The install uses `pip --target`, so PEP 668 doesn't block it. In a `container:` job, or on a runner without them, add `actions/setup-python` before this step.<br />
 **Note:** Call it once per format. `reports` may name several files of one format, but lcov and XML can't mix in one call.<br />
 **Note:** Use one `label` per job; two parallel jobs sharing a label can both post a comment.<br />
 **Note:** For lcov, `SF:` paths are relative to `working-directory` (an Nx workspace sets it to the workspace directory). Absolute paths under the checkout work too. A report written in a container (`/var/www/...`) needs its paths mapped to the checkout first.<br />
